@@ -3,6 +3,8 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 import json
+import pymysql
+from pymysql.cursors import DictCursor
 
 # 加载环境变量
 load_dotenv()
@@ -10,178 +12,64 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# 模拟用户数据
-USER_DATA = {
-    "UTSZ": {
-        "password": "admin",
-        "display_name": "UTSZ用户"
-    }
-}
-
-# 模拟股票数据
-STOCK_DATA = {
-    "贵州茅台": {
-        "code": "600519",
-        "industry": "白酒",
-        "market_cap": "2.5万亿",
-        "pe": "30.5",
-        "recent_performance": "连续3个月上涨",
-        "volatility": "低"
-    },
-    "五粮液": {
-        "code": "000858",
-        "industry": "白酒",
-        "market_cap": "9000亿",
-        "pe": "25.2",
-        "recent_performance": "震荡上行",
-        "volatility": "中等"
-    },
-    "宁德时代": {
-        "code": "300750",
-        "industry": "新能源",
-        "market_cap": "1.2万亿",
-        "pe": "45.8",
-        "recent_performance": "波动较大",
-        "volatility": "高"
-    },
-    "腾讯控股": {
-        "code": "00700",
-        "industry": "互联网",
-        "market_cap": "3万亿",
-        "pe": "18.5",
-        "recent_performance": "稳步回升",
-        "volatility": "中等"
-    },
-    "阿里巴巴": {
-        "code": "9988",
-        "industry": "互联网",
-        "market_cap": "2.8万亿",
-        "pe": "15.2",
-        "recent_performance": "底部企稳",
-        "volatility": "中等"
-    },
-    "美团-W": {
-        "code": "03690",
-        "industry": "互联网",
-        "market_cap": "8000亿",
-        "pe": "-",
-        "recent_performance": "持续调整",
-        "volatility": "高"
-    },
-    "招商银行": {
-        "code": "600036",
-        "industry": "银行",
-        "market_cap": "1.5万亿",
-        "pe": "8.5",
-        "recent_performance": "小幅波动",
-        "volatility": "低"
-    },
-    "中国平安": {
-        "code": "601318",
-        "industry": "保险",
-        "market_cap": "9000亿",
-        "pe": "6.8",
-        "recent_performance": "横盘整理",
-        "volatility": "低"
-    }
-}
-
-# 模拟基金数据
-FUND_DATA = {
-    "005827": {
-        "name": "易方达蓝筹精选混合",
-        "code": "005827",
-        "nav": 2.8745,
-        "changePercent": "2.13%",
-        "change": "+0.0598",
-        "category": "混合型",
-        "risk": "中高风险",
-        "manager": "张坤"
-    },
-    "320007": {
-        "name": "诺安成长混合",
-        "code": "320007",
-        "nav": 1.7654,
-        "changePercent": "-1.24%",
-        "change": "-0.0222",
-        "category": "混合型",
-        "risk": "高风险",
-        "manager": "蔡嵩松"
-    },
-    "002001": {
-        "name": "华夏回报混合A",
-        "code": "002001",
-        "nav": 3.2456,
-        "changePercent": "0.89%",
-        "change": "+0.0288",
-        "category": "混合型",
-        "risk": "中风险",
-        "manager": "王宗合"
-    },
-    "161005": {
-        "name": "富国天惠成长混合A",
-        "code": "161005",
-        "nav": 4.5678,
-        "changePercent": "1.56%",
-        "change": "+0.0695",
-        "category": "混合型",
-        "risk": "中高风险",
-        "manager": "朱少醒"
-    },
-    "163406": {
-        "name": "兴全合润混合",
-        "code": "163406",
-        "nav": 3.8923,
-        "changePercent": "1.23%",
-        "change": "+0.0473",
-        "category": "混合型",
-        "risk": "中高风险",
-        "manager": "谢治宇"
-    }
-}
+# 数据库连接函数
+def get_db_connection():
+    """创建数据库连接"""
+    conn = pymysql.connect(
+        host=os.getenv('MYSQL_HOST', 'localhost'),
+        user=os.getenv('MYSQL_USER', 'root'),
+        password=os.getenv('MYSQL_PASSWORD', ''),
+        database=os.getenv('MYSQL_DATABASE', 'Fin'),
+        port=int(os.getenv('MYSQL_PORT', '3306')),
+        cursorclass=DictCursor
+    )
+    return conn
 
 # 模拟AI助手响应生成函数
 def generate_ai_response(prompt, context):
     """生成AI助手响应"""
     stock_name = None
     
-    # 从prompt中提取股票名称
-    for name in STOCK_DATA.keys():
-        if name in prompt:
-            stock_name = name
-            break
-    
-    # 如果有股票数据在context中
+    # 从context中获取股票数据
     if 'stockData' in context and context['stockData']:
-        stock_name = context['stockData'].get('name', stock_name)
+        stock_name = context['stockData'].get('name', None)
     
-    # 生成响应
-    if stock_name and stock_name in STOCK_DATA:
-        stock_info = STOCK_DATA[stock_name]
-        response = f"关于{stock_name}({stock_info['code']})的分析：\n"
-        response += f"- 所属行业：{stock_info['industry']}\n"
-        response += f"- 市值：{stock_info['market_cap']}\n"
-        response += f"- PE：{stock_info['pe']}\n"
-        response += f"- 近期表现：{stock_info['recent_performance']}\n"
-        response += f"- 波动性：{stock_info['volatility']}\n\n"
-        
-        # 根据行业和表现给出建议
-        if stock_info['industry'] == '白酒':
-            response += "白酒行业具有较强的品牌价值和定价能力，建议关注高端白酒的长期投资价值。"
-        elif stock_info['industry'] == '新能源':
-            response += "新能源行业处于快速发展期，成长性强但波动较大，建议分批建仓，控制仓位。"
-        elif stock_info['industry'] == '互联网':
-            response += "互联网行业估值已回归合理区间，具有长期投资价值，可逢低布局龙头企业。"
-        elif stock_info['industry'] == '银行' or stock_info['industry'] == '保险':
-            response += "金融板块估值较低，股息率较高，适合稳健型投资者配置。"
+    # 从数据库查询股票信息
+    if stock_name:
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM Stocks WHERE name = %s", (stock_name,))
+                stock_info = cursor.fetchone()
+                
+                if stock_info:
+                    response = f"关于{stock_info['name']}({stock_info['code']})的分析：\n"
+                    response += f"- 所属行业：{stock_info['industry']}\n"
+                    response += f"- 市值：{stock_info['market_cap']}\n"
+                    response += f"- PE：{stock_info['pe']}\n"
+                    response += f"- 近期表现：{stock_info['recent_performance']}\n"
+                    response += f"- 波动性：{stock_info['volatility']}\n\n"
+                    
+                    # 根据行业给出建议
+                    if stock_info['industry'] == '白酒':
+                        response += "白酒行业具有较强的品牌价值和定价能力，建议关注高端白酒的长期投资价值。"
+                    elif stock_info['industry'] == '新能源':
+                        response += "新能源行业处于快速发展期，成长性强但波动较大，建议分批建仓，控制仓位。"
+                    elif stock_info['industry'] == '互联网':
+                        response += "互联网行业估值已回归合理区间，具有长期投资价值，可逢低布局龙头企业。"
+                    elif stock_info['industry'] == '银行' or stock_info['industry'] == '保险':
+                        response += "金融板块估值较低，股息率较高，适合稳健型投资者配置。"
+                    return response
+        finally:
+            conn.close()
+    
+    # 通用回复
+    if '股票' in prompt or '行情' in prompt:
+        response = "您好！我是股票智能助手。请告诉我您想了解哪只股票，我可以为您提供详细分析。"
+    elif '买入' in prompt or '卖出' in prompt:
+        response = "投资决策需要综合考虑多方面因素，包括公司基本面、行业前景、技术面和宏观经济环境。建议您在做出投资决策前，充分了解相关风险。"
     else:
-        # 通用回复
-        if '股票' in prompt or '行情' in prompt:
-            response = "您好！我是股票智能助手。请告诉我您想了解哪只股票，我可以为您提供详细分析。"
-        elif '买入' in prompt or '卖出' in prompt:
-            response = "投资决策需要综合考虑多方面因素，包括公司基本面、行业前景、技术面和宏观经济环境。建议您在做出投资决策前，充分了解相关风险。"
-        else:
-            response = "您好！我是您的股票智能助手，请问有什么可以帮助您的？"
+        response = "您好！我是您的股票智能助手，请问有什么可以帮助您的？"
     
     return response
 
@@ -200,7 +88,7 @@ def generate_market_analysis():
     }
 
     # 构建分析文本
-    analysisText = f"市场分析：{analysis['marketOverview']}\n\n热门板块：{analysis['hotSectors'].join('、')}\n\n"
+    analysisText = f"市场分析：{analysis['marketOverview']}\n\n热门板块：{'、'.join(analysis['hotSectors'])}\n\n"
     analysisText += '为您推荐以下股票：\n'
     for i, stock in enumerate(analysis['recommendedStocks']):
         analysisText += f"{i + 1}. {stock['name']} ({stock['code']}) - {stock['reason']}\n"
@@ -281,45 +169,55 @@ def get_stocks():
         order_by = request.args.get('orderBy', 'code')
         order_dir = request.args.get('orderDir', 'asc')
         
-        # 构建股票列表
-        stocks = []
-        for name, info in STOCK_DATA.items():
-            stocks.append({
-                'name': name,
-                'code': info['code'],
-                'industry': info['industry']
-            })
-        
-        # 过滤和排序逻辑
-        filtered_stocks = stocks
-        
-        # 根据行业筛选
-        if industry:
-            filtered_stocks = [stock for stock in filtered_stocks if stock.get('industry') == industry]
-        
-        # 排序
-        reverse = order_dir.lower() == 'desc'
-        filtered_stocks.sort(key=lambda x: x.get(order_by, ''), reverse=reverse)
-        
-        # 分页
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-        paginated_stocks = filtered_stocks[start_index:end_index]
-        
-        # 模拟连接外部金融数据库的接口
-        # 实际实现时，这里可以替换为对真实金融数据库的查询
-        
-        return jsonify({
-            'success': True,
-            'data': paginated_stocks,
-            'pagination': {
-                'currentPage': page,
-                'pageSize': page_size,
-                'totalItems': len(filtered_stocks),
-                'totalPages': (len(filtered_stocks) + page_size - 1) // page_size
-            },
-            'message': '获取股票数据成功'
-        })
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                # 构建查询SQL
+                query = "SELECT name, code, industry FROM Stocks"
+                params = []
+                conditions = []
+
+                # 行业筛选
+                if industry:
+                    conditions.append("industry = %s")
+                    params.append(industry)
+
+                # 添加WHERE子句
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+
+                # 排序
+                valid_order_by = {'code', 'name', 'industry'}
+                if order_by not in valid_order_by:
+                    order_by = 'code'
+                order_dir_sql = 'DESC' if order_dir.lower() == 'desc' else 'ASC'
+                query += f" ORDER BY {order_by} {order_dir_sql}"
+
+                # 总数查询
+                count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"
+                cursor.execute(count_query, params)
+                total = cursor.fetchone()['total']
+
+                # 分页
+                query += " LIMIT %s OFFSET %s"
+                params.extend([page_size, (page - 1) * page_size])
+
+                cursor.execute(query, params)
+                paginated_stocks = cursor.fetchall()
+
+                return jsonify({
+                    'success': True,
+                    'data': paginated_stocks,
+                    'pagination': {
+                        'currentPage': page,
+                        'pageSize': page_size,
+                        'totalItems': total,
+                        'totalPages': (total + page_size - 1) // page_size
+                    },
+                    'message': '获取股票数据成功'
+                })
+        finally:
+            conn.close()
     except Exception as e:
         return jsonify({
             'success': False,
@@ -334,22 +232,30 @@ def login():
         username = data.get('username', '')
         password = data.get('password', '')
         
-        # 验证用户名和密码
-        if username in USER_DATA and USER_DATA[username]['password'] == password:
-            return jsonify({
-                'success': True,
-                'data': {
-                    'username': username,
-                    'display_name': USER_DATA[username]['display_name']
-                },
-                'message': '登录成功'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': '用户名或密码错误',
-                'message': '登录失败'
-            }), 401
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                # 查询用户
+                cursor.execute("SELECT user_id, display_name FROM Users WHERE user_id = %s AND password = %s", (username, password))
+                user = cursor.fetchone()
+
+                if user:
+                    return jsonify({
+                        'success': True,
+                        'data': {
+                            'username': user['user_id'],
+                            'display_name': user['display_name']
+                        },
+                        'message': '登录成功'
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': '用户名或密码错误',
+                        'message': '登录失败'
+                    }), 401
+        finally:
+            conn.close()
     except Exception as e:
         return jsonify({
             'success': False,
@@ -369,55 +275,65 @@ def get_funds():
         order_by = request.args.get('orderBy', 'code')
         order_dir = request.args.get('orderDir', 'asc')
         
-        # 构建基金列表
-        funds = []
-        for code, info in FUND_DATA.items():
-            funds.append({
-                'id': code,
-                'name': info['name'],
-                'code': info['code'],
-                'nav': info['nav'],
-                'changePercent': info['changePercent'],
-                'change': info['change'],
-                'category': info['category'],
-                'risk': info['risk'],
-                'manager': info['manager']
-            })
-        
-        # 过滤和排序逻辑
-        filtered_funds = funds
-        
-        # 根据类别筛选
-        if category:
-            filtered_funds = [fund for fund in filtered_funds if fund.get('category') == category]
-        
-        # 根据风险等级筛选
-        if risk_level:
-            filtered_funds = [fund for fund in filtered_funds if fund.get('risk') == risk_level]
-        
-        # 排序
-        reverse = order_dir.lower() == 'desc'
-        filtered_funds.sort(key=lambda x: x.get(order_by, ''), reverse=reverse)
-        
-        # 分页
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-        paginated_funds = filtered_funds[start_index:end_index]
-        
-        # 模拟连接外部金融数据库的接口
-        # 实际实现时，这里可以替换为对真实金融数据库的查询
-        
-        return jsonify({
-            'success': True,
-            'data': paginated_funds,
-            'pagination': {
-                'currentPage': page,
-                'pageSize': page_size,
-                'totalItems': len(filtered_funds),
-                'totalPages': (len(filtered_funds) + page_size - 1) // page_size
-            },
-            'message': '获取基金数据成功'
-        })
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                # 构建查询SQL
+                query = "SELECT name, code, nav, change_percent as changePercent, fund_change as change, category, risk, manager FROM Fundings"
+                params = []
+                conditions = []
+
+                # 根据类别筛选
+                if category:
+                    conditions.append("category = %s")
+                    params.append(category)
+
+                # 根据风险等级筛选
+                if risk_level:
+                    conditions.append("risk = %s")
+                    params.append(risk_level)
+
+                # 添加WHERE子句
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+
+                # 排序
+                valid_order_by = {'code', 'name', 'nav', 'change_percent'}
+                if order_by not in valid_order_by:
+                    order_by = 'code'
+                order_dir_sql = 'DESC' if order_dir.lower() == 'desc' else 'ASC'
+                # 总数查询
+                count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"
+                cursor.execute(count_query, params)
+                total = cursor.fetchone()['total']
+
+                # 排序
+                valid_order_by = {'code', 'name', 'nav', 'change_percent'}
+                if order_by not in valid_order_by:
+                    order_by = 'code'
+                order_dir_sql = 'DESC' if order_dir.lower() == 'desc' else 'ASC'
+                query += f" ORDER BY {order_by} {order_dir_sql}"
+
+                # 分页
+                query += " LIMIT %s OFFSET %s"
+                params.extend([page_size, (page - 1) * page_size])
+
+                cursor.execute(query, params)
+                paginated_funds = cursor.fetchall()
+
+                return jsonify({
+                    'success': True,
+                    'data': paginated_funds,
+                    'pagination': {
+                        'currentPage': page,
+                        'pageSize': page_size,
+                        'totalItems': total,
+                        'totalPages': (total + page_size - 1) // page_size
+                    },
+                    'message': '获取基金数据成功'
+                })
+        finally:
+            conn.close()
     except Exception as e:
         return jsonify({
             'success': False,
