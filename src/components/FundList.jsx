@@ -105,7 +105,8 @@ const FundList = ({ onSelectFund }) => {
       const response = await fetch(`http://localhost:5000/api/funds?${params.toString()}`);
       const data = await response.json();
       
-      if (data.success) {
+      // 检查数据是否存在
+      if (data && data.data) {
         // 更新分页信息
         if (data.pagination) {
           setPagination(data.pagination);
@@ -118,7 +119,7 @@ const FundList = ({ onSelectFund }) => {
           setFunds(data.data);
         }
       } else {
-        setError('获取基金列表失败: ' + (data.error || '未知错误'));
+        setError('获取基金列表失败: 无效的响应格式');
       }
     } catch (err) {
       setError('获取基金数据失败，请稍后重试');
@@ -232,7 +233,7 @@ const FundList = ({ onSelectFund }) => {
         <div className="fund-list">
           {funds.map((fund) => (
             <div 
-              key={fund.id} 
+              key={fund.id || fund.code} 
               className="fund-item"
               onClick={() => handleFundClick(fund)}
             >
@@ -241,7 +242,7 @@ const FundList = ({ onSelectFund }) => {
                 <div className="fund-code">{fund.code}</div>
               </div>
               <div className="fund-details">
-                <div className="fund-nav">{fund.nav.toFixed(4)}</div>
+                <div className="fund-nav">{Number(fund.nav)?.toFixed(4) || '0.0000'}</div>
                 <div className={`fund-change ${fund.change.startsWith('+') ? 'positive' : 'negative'}`}>
                   {fund.changePercent}
                 </div>

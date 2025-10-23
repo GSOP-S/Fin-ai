@@ -420,7 +420,7 @@ function App() {
         <div className="fund-detail">
           <button className="back-btn" onClick={() => setSelectedFund(null)}>返回</button>
           <h2>{selectedFund.name} ({selectedFund.code})</h2>
-          <div className="fund-nav">净值：{selectedFund.nav.toFixed(4)}元</div>
+          <div className="fund-nav">净值：{Number(selectedFund.nav)?.toFixed(4) || '0.0000'}元</div>
           <div className={`fund-change ${selectedFund.change.startsWith('+') ? 'positive' : 'negative'}`}>
             {selectedFund.change} ({selectedFund.changePercent})
           </div>

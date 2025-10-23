@@ -172,8 +172,9 @@ def get_stocks():
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                # 构建查询SQL
-                query = "SELECT name, code, industry FROM Stocks"
+                # 构建查询SQL，获取更多股票信息
+                base_query = "SELECT name, code, industry, market_cap, pe, recent_performance FROM Stocks"
+                count_query = "SELECT COUNT(*) as total FROM Stocks"
                 params = []
                 conditions = []
 
@@ -181,24 +182,26 @@ def get_stocks():
                 if industry:
                     conditions.append("industry = %s")
                     params.append(industry)
-
+                
                 # 添加WHERE子句
                 if conditions:
-                    query += " WHERE " + " AND ".join(conditions)
+                    where_clause = " WHERE " + " AND ".join(conditions)
+                    base_query += where_clause
+                    count_query += where_clause
 
                 # 排序
-                valid_order_by = {'code', 'name', 'industry'}
+                valid_order_by = {'code', 'name', 'industry', 'market_cap', 'pe'}
                 if order_by not in valid_order_by:
                     order_by = 'code'
                 order_dir_sql = 'DESC' if order_dir.lower() == 'desc' else 'ASC'
-                query += f" ORDER BY {order_by} {order_dir_sql}"
-
+                order_clause = f" ORDER BY {order_by} {order_dir_sql}"
+                
                 # 总数查询
-                count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"
                 cursor.execute(count_query, params)
                 total = cursor.fetchone()['total']
-
-                # 分页
+                
+                # 最终查询（包含排序和分页）
+                query = base_query + order_clause
                 query += " LIMIT %s OFFSET %s"
                 params.extend([page_size, (page - 1) * page_size])
 
@@ -278,8 +281,9 @@ def get_funds():
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                # 构建查询SQL
-                query = "SELECT name, code, nav, change_percent as changePercent, fund_change as change, category, risk, manager FROM Fundings"
+                # 构建查询SQL，注意使用反引号包围保留关键字'change'
+                base_query = "SELECT name, code, nav, change_percent as changePercent, fund_change as `change`, category, risk, manager FROM Fundings"
+                count_query = "SELECT COUNT(*) as total FROM Fundings"
                 params = []
                 conditions = []
 
@@ -295,26 +299,23 @@ def get_funds():
 
                 # 添加WHERE子句
                 if conditions:
-                    query += " WHERE " + " AND ".join(conditions)
+                    where_clause = " WHERE " + " AND ".join(conditions)
+                    base_query += where_clause
+                    count_query += where_clause
 
                 # 排序
                 valid_order_by = {'code', 'name', 'nav', 'change_percent'}
                 if order_by not in valid_order_by:
                     order_by = 'code'
                 order_dir_sql = 'DESC' if order_dir.lower() == 'desc' else 'ASC'
+                order_clause = f" ORDER BY {order_by} {order_dir_sql}"
+
                 # 总数查询
-                count_query = f"SELECT COUNT(*) as total FROM ({query}) as subquery"
                 cursor.execute(count_query, params)
                 total = cursor.fetchone()['total']
 
-                # 排序
-                valid_order_by = {'code', 'name', 'nav', 'change_percent'}
-                if order_by not in valid_order_by:
-                    order_by = 'code'
-                order_dir_sql = 'DESC' if order_dir.lower() == 'desc' else 'ASC'
-                query += f" ORDER BY {order_by} {order_dir_sql}"
-
-                # 分页
+                # 最终查询（包含排序和分页）
+                query = base_query + order_clause
                 query += " LIMIT %s OFFSET %s"
                 params.extend([page_size, (page - 1) * page_size])
 
@@ -405,7 +406,7 @@ def submit_feedback():
             'content': data.get('content', ''),
             'feedback_type': data.get('type', ''),  # 'like' or 'dislike'
             'user_comment': data.get('comment', ''),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': __import__('datetime').datetime.now().isoformat()
         }
         
         FEEDBACK_DATA.append(feedback)
