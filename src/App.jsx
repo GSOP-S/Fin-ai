@@ -4,6 +4,9 @@ import AIAssistant from './components/AIAssistant';
 import StockList from './components/StockList';
 import Login from './components/Login';
 import FundList from './components/FundList';
+import HomePage from './components/HomePage';
+import TransferPage from './components/TransferPage';
+import BillDetail from './components/BillDetail';
 
 function App() {
   const [selectedStock, setSelectedStock] = useState(null);
@@ -17,7 +20,8 @@ function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('stocks'); // 'stocks' 或 'funds'
+  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'account', 'transfer', 'financing', 'deposit', etc.
+  const [financingTab, setFinancingTab] = useState('stocks'); // 'stocks' 或 'funds'
   const [marketAnalysisShown, setMarketAnalysisShown] = useState(false);
   const [currentSuggestionId, setCurrentSuggestionId] = useState('');
   const appRef = useRef(null);
@@ -195,10 +199,10 @@ function App() {
       setHasNewSuggestion(false);
       setCurrentSuggestionId(`fund-${fund.code}-${Date.now()}`);
       
-      // 10秒后自动隐藏气泡
+      // 20秒后自动隐藏气泡
       setTimeout(() => {
         setShowSuggestionBubble(false);
-      }, 10000);
+      }, 20000);
     } catch (error) {
       console.error('基金建议API调用失败:', error);
       // 备用建议
@@ -208,10 +212,10 @@ function App() {
       setHasNewSuggestion(false);
       setCurrentSuggestionId(`fund-${fund.code}-${Date.now()}`);
       
-      // 10秒后自动隐藏气泡
+      // 20秒后自动隐藏气泡
       setTimeout(() => {
         setShowSuggestionBubble(false);
-      }, 10000);
+      }, 20000);
     }
   };
 
@@ -397,11 +401,15 @@ function App() {
 
   // 渲染当前内容
   const renderContent = () => {
+    // 详情页优先渲染
     // 如果有选中的股票，显示股票详情
     if (selectedStock) {
       return (
         <div className="stock-detail">
-          <button className="back-btn" onClick={() => setSelectedStock(null)}>返回</button>
+          <button className="back-btn" onClick={() => {
+            setSelectedStock(null);
+            handleNavigate('financing');
+          }}>返回</button>
           <h2>{selectedStock.name} ({selectedStock.code})</h2>
           <div className="stock-price">{selectedStock.price}元</div>
           <div className="stock-change">{selectedStock.change} ({selectedStock.changePercent})</div>
@@ -418,7 +426,10 @@ function App() {
     if (selectedFund) {
       return (
         <div className="fund-detail">
-          <button className="back-btn" onClick={() => setSelectedFund(null)}>返回</button>
+          <button className="back-btn" onClick={() => {
+            setSelectedFund(null);
+            handleNavigate('financing');
+          }}>返回</button>
           <h2>{selectedFund.name} ({selectedFund.code})</h2>
           <div className="fund-nav">净值：{Number(selectedFund.nav)?.toFixed(4) || '0.0000'}元</div>
           <div className={`fund-change ${selectedFund.change.startsWith('+') ? 'positive' : 'negative'}`}>
@@ -433,29 +444,120 @@ function App() {
       );
     }
 
-    // 根据当前选中的标签显示对应内容
-    if (activeTab === 'stocks') {
-      return (
-        <StockList 
-          onSelectStock={handleStockSelect}
-          onStockHover={handleStockHover}
-          onStockLeave={handleStockLeave}
-        />
-      );
-    } else {
-      return (
-        <FundList 
-          onSelectFund={handleSelectFund}
-        />
-      );
+    // 根据当前页面渲染不同内容
+    switch (currentPage) {
+      case 'home':
+        return <HomePage onNavigate={handleNavigate} />;
+      
+      case 'financing':
+        // 理财页面显示股票和基金标签
+        return (
+          <div className="financing-container">
+            <div className="financing-tabs">
+              <button 
+                className={`financing-tab ${financingTab === 'stocks' ? 'active' : ''}`}
+                onClick={() => setFinancingTab('stocks')}
+              >
+                股票
+              </button>
+              <button 
+                className={`financing-tab ${financingTab === 'funds' ? 'active' : ''}`}
+                onClick={() => setFinancingTab('funds')}
+              >
+                基金
+              </button>
+            </div>
+            <div className="financing-content">
+              {financingTab === 'stocks' ? (
+                <StockList 
+                  onSelectStock={handleStockSelect}
+                  onStockHover={handleStockHover}
+                  onStockLeave={handleStockLeave}
+                />
+              ) : (
+                <FundList 
+                  onSelectFund={handleSelectFund}
+                />
+              )}
+            </div>
+          </div>
+        );
+      
+      case 'account':
+        return (
+          <BillDetail onNavigate={handleNavigate} />
+        );
+      
+      case 'transfer':
+        return (
+          <TransferPage onNavigate={handleNavigate} />
+        );
+      
+      case 'deposit':
+        return (
+          <div className="page-container">
+            <button className="back-btn" onClick={() => handleNavigate('home')}>返回首页</button>
+            <h1>定期存款</h1>
+            <p>此处将显示定期存款产品...</p>
+          </div>
+        );
+      
+      default:
+        // 其他页面暂时返回提示信息
+        return (
+          <div className="page-container">
+            <button className="back-btn" onClick={() => handleNavigate('home')}>返回首页</button>
+            <h1>{getPageTitle(currentPage)}</h1>
+            <p>功能正在开发中，敬请期待...</p>
+          </div>
+        );
     }
   };
-
+  
+  // 获取页面标题
+  const getPageTitle = (page) => {
+    const titles = {
+      'home': '首页',
+      'account': '账户明细',
+      'transfer': '转账汇款',
+      'financing': '投资理财',
+      'deposit': '定期存款',
+      'creditCard': '信用卡',
+      'insurance': '保险服务',
+      'loan': '贷款服务',
+      'scan': '扫一扫',
+      'withdraw': '取款',
+      'more': '更多服务'
+    };
+    return titles[page] || '功能页面';
+  };
+  
+  // 监听financingTab的变化，确保从HomePage点击推荐产品时能正确设置标签
+  useEffect(() => {
+    const checkTabChange = () => {
+      if (window.financingTab) {
+        setFinancingTab(window.financingTab);
+        // 清除全局变量
+        delete window.financingTab;
+      }
+    };
+    
+    // 立即检查一次
+    checkTabChange();
+    
+    // 添加窗口事件监听器（可选）
+    window.addEventListener('tabchange', checkTabChange);
+    
+    return () => {
+      window.removeEventListener('tabchange', checkTabChange);
+    };
+  }, []);
+  
   // 显示市场分析气泡 - 在用户登录或切换到列表页面时触发
   useEffect(() => {
-    // 只有在用户已登录且在列表页面时才显示
+    // 只有在用户已登录且在理财页面（股票或基金列表）时才显示
     const fetchMarketAnalysis = async () => {
-      if (user && !selectedStock && !selectedFund && !marketAnalysisShown) {
+      if (user && currentPage === 'financing' && !selectedStock && !selectedFund && !marketAnalysisShown) {
         try {
           const analysis = await generateMarketAnalysis();
           setCurrentSuggestion(analysis);
@@ -484,15 +586,29 @@ function App() {
         clearTimeout(marketAnalysisTimeoutRef.current);
       }
     };
-  }, [user, selectedStock, selectedFund]);
+  }, [user, currentPage, selectedStock, selectedFund]);
   
-  // 当返回列表页面时重置marketAnalysisShown状态，以便再次显示市场分析
+  // 当返回理财列表页面时重置marketAnalysisShown状态
   useEffect(() => {
     // 当离开详情页返回到列表页时，重置marketAnalysisShown状态
-    if (!selectedStock && !selectedFund) {
+    if (currentPage === 'financing' && !selectedStock && !selectedFund) {
       setMarketAnalysisShown(false);
     }
-  }, [selectedStock, selectedFund]);
+  }, [currentPage, selectedStock, selectedFund]);
+  
+  // 处理页面导航
+  const handleNavigate = (page) => {
+    // 清除详情页状态
+    setSelectedStock(null);
+    setSelectedFund(null);
+    
+    // 设置当前页面
+    setCurrentPage(page);
+    
+    // 清除建议气泡
+    setShowSuggestionBubble(false);
+    setMarketAnalysisShown(false);
+  };
 
   // 如果用户未登录，显示登录页面
   if (!user) {
@@ -501,44 +617,55 @@ function App() {
 
   return (
     <div className="app" ref={appRef}>
-      <header className="app-header">
-        <div className="header-content">
-          <h1>金融理财APP</h1>
-          <div className="user-info">
-            <span className="welcome-text">欢迎，{user.displayName}</span>
+      {/* 只有在非首页且非详情页时显示顶部导航栏 */}
+      {(currentPage !== 'home' && !selectedStock && !selectedFund) && (
+        <header className="app-header">
+          <div className="header-content">
+            <h1>{getPageTitle(currentPage)}</h1>
+            <div className="user-info">
+              <span className="welcome-text">欢迎，{user.displayName}</span>
+            </div>
           </div>
-        </div>
-        
-        {/* 导航标签 */}
-        <div className="nav-tabs">
-          <button 
-            className={`nav-tab ${activeTab === 'stocks' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('stocks');
-              // 如果在详情页，切换标签时需要清除选中状态
-              setSelectedStock(null);
-              setSelectedFund(null);
-            }}
-          >
-            股票
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === 'funds' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('funds');
-              // 如果在详情页，切换标签时需要清除选中状态
-              setSelectedStock(null);
-              setSelectedFund(null);
-            }}
-          >
-            基金
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
       
       <main className="app-content">
         {renderContent()}
       </main>
+      
+      {/* 底部导航栏，仅在首页和理财页显示 */}
+      {(currentPage === 'home' || currentPage === 'financing') && !selectedStock && !selectedFund && (
+        <nav className="bottom-nav">
+          <button 
+            className={`nav-item ${currentPage === 'home' ? 'active' : ''}`}
+            onClick={() => handleNavigate('home')}
+          >
+            <span className="nav-icon">🏠</span>
+            <span className="nav-text">首页</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'account' ? 'active' : ''}`}
+            onClick={() => handleNavigate('account')}
+          >
+            <span className="nav-icon">📊</span>
+            <span className="nav-text">账户</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'financing' ? 'active' : ''}`}
+            onClick={() => handleNavigate('financing')}
+          >
+            <span className="nav-icon">💰</span>
+            <span className="nav-text">理财</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'more' ? 'active' : ''}`}
+            onClick={() => handleNavigate('more')}
+          >
+            <span className="nav-icon">⋮⋮</span>
+            <span className="nav-text">更多</span>
+          </button>
+        </nav>
+      )}
 
       {/* 悬浮AI助手按钮 */}
       <AIAssistant 
@@ -652,7 +779,7 @@ function App() {
           <div className="ai-chat-messages" ref={chatContainerRef}>
             {chatMessages.length === 0 ? (
               <div className="ai-chat-placeholder">
-                你好！我是股票智能助手，请问有什么可以帮助你的？
+                你好！我是您的智能助手，请问有什么可以帮助你的？
               </div>
             ) : (
               chatMessages.map((message, index) => (

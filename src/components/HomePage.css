@@ -1,0 +1,355 @@
+/* 首页样式 */
+.homepage {
+  padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* 账户卡片样式 */
+.account-card {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 20px;
+  padding: 25px;
+  color: white;
+  margin-bottom: 25px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.account-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.account-number {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.account-balance {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* 快捷功能区样式 */
+.quick-actions {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.quick-actions h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 10px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.action-item:hover {
+  background-color: #e9ecef;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.action-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.action-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.action-description {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+/* 金融资讯区样式 */
+.financial-news {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.financial-news h3 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.news-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.news-item:hover {
+  background-color: #e9ecef;
+}
+
+.news-tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  background-color: #4facfe;
+  color: white;
+  border-radius: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.news-title {
+  font-size: 14px;
+  color: #333;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 推荐理财产品样式 */
+.recommended-products {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.view-all-btn {
+  background: none;
+  border: none;
+  color: #4facfe;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.view-all-btn:hover {
+  background-color: rgba(79, 172, 254, 0.1);
+}
+
+.product-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.product-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 15px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 100px;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.product-card:nth-child(1) {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+}
+
+.product-card:nth-child(2) {
+  background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+}
+
+.product-card:nth-child(3) {
+  background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+}
+
+.product-icon {
+  font-size: 32px;
+}
+
+.product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-info h4 {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .homepage {
+    padding: 15px;
+  }
+  
+  .action-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .action-icon {
+    font-size: 24px;
+  }
+  
+  .action-title {
+    font-size: 13px;
+  }
+  
+  .action-description {
+    display: none;
+  }
+  
+  .product-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .product-card {
+    padding: 15px 10px;
+    height: 90px;
+  }
+  
+  .product-icon {
+    font-size: 28px;
+  }
+  
+  .product-info h4 {
+    font-size: 14px;
+  }
+  
+  .product-info p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .account-balance {
+    font-size: 28px;
+  }
+  
+  .action-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  
+  .action-item {
+    padding: 10px 5px;
+  }
+  
+  .action-icon {
+    font-size: 22px;
+    margin-bottom: 5px;
+  }
+  
+  .action-title {
+    font-size: 12px;
+  }
+  
+  .product-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .product-card {
+    height: 80px;
+  }
+}

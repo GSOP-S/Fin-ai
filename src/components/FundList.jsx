@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './FundList.css';
+import AIAnalysisPanel from './AIAnalysisPanel';
 
-const FundList = ({ onSelectFund }) => {
+const FundList = () => {
+  const [selectedFund, setSelectedFund] = useState(null);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -145,9 +147,7 @@ const FundList = ({ onSelectFund }) => {
   };
 
   const handleFundClick = (fund) => {
-    if (onSelectFund) {
-      onSelectFund(fund);
-    }
+    setSelectedFund(fund);
   };
 
   const renderContent = () => {
@@ -180,6 +180,7 @@ const FundList = ({ onSelectFund }) => {
     }
 
     return (
+    <>
       <div className="fund-list-container">
         <div className="fund-list-header">
           <h2>基金列表</h2>
@@ -233,10 +234,10 @@ const FundList = ({ onSelectFund }) => {
         <div className="fund-list">
           {funds.map((fund) => (
             <div 
-              key={fund.id || fund.code} 
-              className="fund-item"
-              onClick={() => handleFundClick(fund)}
-            >
+            key={fund.id || fund.code} 
+            className={`fund-item ${selectedFund?.id === fund.id ? 'selected' : ''}`}
+            onClick={() => handleFundClick(fund)}
+          >
               <div className="fund-info">
                 <div className="fund-name">{fund.name}</div>
                 <div className="fund-code">{fund.code}</div>
@@ -271,7 +272,9 @@ const FundList = ({ onSelectFund }) => {
           </button>
         </div>
       </div>
-    );
+      <AIAnalysisPanel selectedProduct={selectedFund} productType="fund" />
+    </>
+    )
   };
   
   return renderContent();

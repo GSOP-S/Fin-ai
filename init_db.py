@@ -67,6 +67,32 @@ try:
         )
         ''')
 
+        # 创建AI建议表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS AISuggestions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            page_type VARCHAR(50) NOT NULL,
+            suggestion_type VARCHAR(50) NOT NULL,
+            content JSON NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY page_type_suggestion_type (page_type, suggestion_type)
+        )
+        ''')
+
+        # 创建用户AI交互记录表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS UserAIActions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id VARCHAR(50) NOT NULL,
+            page_type VARCHAR(50) NOT NULL,
+            action_type VARCHAR(50) NOT NULL,
+            suggestion_id INT,
+            action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES Users(user_id),
+            FOREIGN KEY (suggestion_id) REFERENCES AISuggestions(id)
+        )
+        ''')
+
         # 插入初始用户数据
         cursor.execute('''
         INSERT IGNORE INTO Users (user_id, password, display_name) VALUES
@@ -101,6 +127,52 @@ try:
         INSERT IGNORE INTO Fundings (code, name, nav, change_percent, fund_change, category, risk, manager)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         ''', fund_data)
+
+        # 插入初始AI建议数据
+        ai_suggestions = [
+            # 转账页面智能账户推荐
+            ('transfer', 'recent_accounts', '''{
+                "recentAccounts": [
+                    {"id": 1, "name": "张三", "accountNumber": "6222 **** **** 5678", "avatar": "👤"},
+                    {"id": 2, "name": "李四", "accountNumber": "6222 **** **** 1234", "avatar": "👤"},
+                    {"id": 3, "name": "王五", "accountNumber": "6222 **** **** 9012", "avatar": "👤"}
+                ]
+            }'''),
+            # 转账页面到账时间预估
+            ('transfer', 'arrival_time', '''{
+                "same_bank": "实时到账",
+                "other_bank": "预计1-2小时",
+                "peak_suggestion": "当前高峰，建议次日到账免手续费"
+            }'''),
+            # 账单页面消费结构分析
+            ('bill', 'category_analysis', '''{
+                "categoryAnalysis": [
+                    {"name": "餐饮美食", "percentage": 35},
+                    {"name": "购物消费", "percentage": 25},
+                    {"name": "交通出行", "percentage": 15},
+                    {"name": "休闲娱乐", "percentage": 10},
+                    {"name": "其他支出", "percentage": 15}
+                ],
+                "abnormalItems": [
+                    {"merchant": "XX奢侈品店", "amount": "+5800元"},
+                    {"merchant": "XX游戏充值", "amount": "+1200元"}
+                ]
+            }'''),
+            # 理财页面产品适配度分析
+            ('financing', 'product_match', '''{
+                "matchIndex": 75,
+                "riskLevel": "中等",
+                "paramExplanations": [
+                    {"name": "夏普比率", "explanation": "该基金夏普比率为1.8，高于同类平均水平，风险调整后收益表现良好"},
+                    {"name": "最大回撤", "explanation": "近一年最大回撤为15%，处于同类中等水平"},
+                    {"name": "年化收益率", "explanation": "近一年年化收益率为12.5%，符合您的风险偏好"}
+                ]
+            }''')
+        ]
+        cursor.executemany('''
+        INSERT IGNORE INTO AISuggestions (page_type, suggestion_type, content)
+        VALUES (%s, %s, %s)
+        ''', ai_suggestions)
 
     conn.commit()
     print('数据库和表创建成功，并插入初始数据')
