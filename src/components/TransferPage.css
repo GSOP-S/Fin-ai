@@ -42,6 +42,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .recipient-account-input {
@@ -110,8 +111,70 @@
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
 }
 
-/* AI助手浮层样式 */
-.ai-assistant-float {
+/* AI触发按钮样式 */
+.ai-trigger-btn {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
+}
+
+.ai-trigger-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.ai-trigger-btn .ai-icon {
+  font-size: 24px;
+}
+
+/* 账户类型指示器 */
+.account-type-indicator {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.account-type-indicator .same-bank {
+  color: #10b981;
+  background-color: #d1fae5;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.account-type-indicator .other-bank {
+  color: #f59e0b;
+  background-color: #fef3c7;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* 风险指示器 */
+.risk-indicator {
+  margin-top: 8px;
+  padding: 10px 15px;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 移除旧的AI助手浮层样式（已废弃） */
+.ai-assistant-float-deprecated {
   position: absolute;
   top: 50px;
   right: 0;

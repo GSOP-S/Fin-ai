@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import './TransferPage.css';
 
-function TransferPage({ onNavigate }) {
+function TransferPage({ onNavigate, onShowAISuggestion }) {
   // 状态管理
-  const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [recipientAccount, setRecipientAccount] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [isFirstTimeAccount, setIsFirstTimeAccount] = useState(false);
   const [accountType, setAccountType] = useState('');
+  const [aiSuggestionData, setAiSuggestionData] = useState(null);
 
   // 模拟历史转账账户数据
   const recentAccounts = [
@@ -38,26 +38,59 @@ function TransferPage({ onNavigate }) {
   const handleRecipientAccountChange = (e) => {
     const value = e.target.value;
     setRecipientAccount(value);
+    
     // 模拟检测账户类型
+    let detectedAccountType = '';
+    let isFirstTime = false;
+    
     if (value.includes('6222')) {
-      setAccountType('same_bank');
-    } else if (value) {
-      setAccountType('other_bank');
-      setIsFirstTimeAccount(true); // 模拟首次添加账户
-    } else {
-      setAccountType('');
-      setIsFirstTimeAccount(false);
+      detectedAccountType = 'same_bank';
+    } else if (value.length >= 10) {
+      detectedAccountType = 'other_bank';
+      isFirstTime = Math.random() > 0.5; // 模拟首次添加账户
+    }
+    
+    setAccountType(detectedAccountType);
+    setIsFirstTimeAccount(isFirstTime);
+    
+    // 当输入完整账号后，触发AI建议
+    if (value.length >= 10 && onShowAISuggestion) {
+      const suggestionData = {
+        recipientAccount: value,
+        accountType: detectedAccountType,
+        isFirstTimeAccount: isFirstTime,
+        recentAccounts,
+        arrivalTime: detectedAccountType === 'same_bank' ? '实时到账' : '预计1-2小时',
+        suggestion: isFirstTime ? '该账户近期无交易记录，建议核实收款人信息' : '常用账户，可放心转账'
+      };
+      
+      setAiSuggestionData(suggestionData);
+      
+      // 自动触发AI建议气泡（延迟500ms，让用户看到账户类型变化）
+      setTimeout(() => {
+        onShowAISuggestion('transfer', suggestionData, {
+          autoShow: true,
+          autoHideDelay: 25000,
+          speakEnabled: false
+        });
+      }, 500);
     }
   };
 
-  // 选择历史账户
-  const selectAccount = (account) => {
-    setRecipientAccount(account.accountNumber);
-    setShowAiAssistant(false);
-    // 简单判断是否为首次转账账户
-    setIsFirstTimeAccount(Math.random() > 0.5);
-    // 随机模拟账户类型（本行/跨行）
-    setAccountType(Math.random() > 0.5 ? 'same_bank' : 'other_bank');
+  // 手动触发AI转账建议
+  const triggerAISuggestion = () => {
+    if (onShowAISuggestion) {
+      const suggestionData = aiSuggestionData || {
+        recentAccounts,
+        suggestion: '选择常用账户可以更快完成转账'
+      };
+      
+      onShowAISuggestion('transfer', suggestionData, {
+        autoShow: true,
+        autoHideDelay: 0, // 手动触发不自动隐藏
+        speakEnabled: false
+      });
+    }
   };
 
   // 处理转账提交
@@ -83,80 +116,32 @@ function TransferPage({ onNavigate }) {
               type="text"
               value={recipientAccount}
               onChange={handleRecipientAccountChange}
-              placeholder="请输入收款账户"
+              placeholder="请输入收款账户或选择历史账户"
               className="recipient-account-input"
             />
             <button
-              className="ai-icon-btn"
-              onClick={() => setShowAiAssistant(!showAiAssistant)}
-              aria-label="AI助手"
+              className="ai-trigger-btn"
+              onClick={triggerAISuggestion}
+              aria-label="AI转账助手"
+              title="获取智能转账建议"
             >
-              <span className="ai-icon">AI</span>
+              <span className="ai-icon">🤖</span>
             </button>
-            {showAiAssistant && (
-              <div className="ai-assistant-float">
-                <div className="ai-float-header">
-                  <h3>智能转账助手</h3>
-                  <button onClick={() => setShowAiAssistant(false)}>×</button>
-                </div>
-                <div className="ai-section">
-                  <h4>历史关联推荐</h4>
-                  <div className="recent-accounts">
-                    {recentAccounts.map(account => (
-                      <div
-                        key={account.id}
-                        className="recent-account-item"
-                        onClick={() => selectAccount(account)}
-                      >
-                        <div className="account-avatar">{account.avatar}</div>
-                        <div className="account-info">
-                          <div className="account-name">{account.name}</div>
-                          <div className="account-number">{account.accountNumber}</div>
-                          <div className="last-transfer">最近: {account.lastTransfer}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="ai-section">
-                  <h4>到账时间预估</h4>
-                  <div className="arrival-time-info">
-                    {accountType === 'same_bank' ? (
-                      <div className="same-bank-arrival">
-                        <span className="time-label">本行账户 → 实时到账</span>
-                      </div>
-                    ) : (
-                      <div className="other-bank-arrival">
-                        <span className="time-label">跨行账户 → 预计1-2小时</span>
-                        <div className="fee-suggestion">
-                          <span className="peak-time-alert">当前时段转账高峰</span>
-                          <span className="suggestion-text">建议优先选次日到账免手续费</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {isFirstTimeAccount && (
-                  <div className="ai-section risk-alert-section">
-                    <h4>风险校验提醒</h4>
-                    <div className="risk-alert">
-                      <div className="risk-icon">⚠️</div>
-                      <div className="risk-text">
-                        该账户近3个月无交易记录，是否开启24小时到账保护？
-                      </div>
-                      <div className="risk-actions">
-                        <button className="risk-btn confirm-btn">开启保护</button>
-                        <button className="risk-btn cancel-btn">取消</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-
-          {/* AI助手浮层 */}
-
+          {accountType && (
+            <div className="account-type-indicator">
+              {accountType === 'same_bank' ? (
+                <span className="same-bank">✓ 本行账户 · 实时到账</span>
+              ) : (
+                <span className="other-bank">⚠️ 跨行账户 · 预计1-2小时</span>
+              )}
+            </div>
+          )}
+          {isFirstTimeAccount && (
+            <div className="risk-indicator">
+              ⚠️ 新账户，建议核实收款人信息
+            </div>
+          )}
         </div>
 
         <div className="form-group">

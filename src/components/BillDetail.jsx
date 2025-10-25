@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './BillDetail.css';
 
-const BillDetail = ({ onNavigate }) => {
+const BillDetail = ({ onNavigate, onShowAISuggestion }) => {
   // 状态管理
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiAnalysisData, setAiAnalysisData] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [aiSuggestionTriggered, setAiSuggestionTriggered] = useState(false);
 
   // 模拟账单数据
   useEffect(() => {
@@ -70,10 +71,30 @@ const BillDetail = ({ onNavigate }) => {
       ];
       setBills(mockBills);
       setLoading(false);
-      // 生成AI分析
-      generateAiAnalysis(mockBills);
+      // 生成AI分析数据（但不直接显示）
+      const analysisData = generateAiAnalysis(mockBills);
+      setAiAnalysisData(analysisData);
+      setAiSuggestionTriggered(false); // 重置触发状态
     }, 800);
   }, [selectedMonth]);
+  
+  // 数据加载完成后，自动触发AI建议气泡
+  useEffect(() => {
+    if (!loading && aiAnalysisData && !aiSuggestionTriggered && onShowAISuggestion) {
+      // 延迟触发，让用户先看到账单列表
+      setTimeout(() => {
+        onShowAISuggestion('bill', { 
+          bills,
+          analysis: aiAnalysisData 
+        }, {
+          autoShow: true,
+          autoHideDelay: 30000, // 账单分析显示30秒
+          speakEnabled: true
+        });
+        setAiSuggestionTriggered(true);
+      }, 1500);
+    }
+  }, [loading, aiAnalysisData, aiSuggestionTriggered, bills, onShowAISuggestion]);
 
   // 生成AI消费分析
   const generateAiAnalysis = (transactions) => {
@@ -119,8 +140,8 @@ const BillDetail = ({ onNavigate }) => {
       suggestions.push('支出已超过收入的80%，建议控制非必要开支，适当增加储蓄比例。');
     }
 
-    // 设置AI分析结果
-    setAiAnalysis({
+    // 返回AI分析结果（而不是设置状态）
+    return {
       summary: {
         totalIncome,
         totalExpense,
@@ -140,7 +161,7 @@ const BillDetail = ({ onNavigate }) => {
                t.category === '餐饮' ? '单次餐饮消费过高' : '单次购物消费过高'
       })),
       suggestions
-    });
+    };
   };
 
   // 格式化金额显示
@@ -179,78 +200,27 @@ const BillDetail = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* AI解读栏 */}
-      {aiAnalysis && (
-        <div className="ai-analysis-bar">
-          <div className="analysis-header">
-            <h3>AI消费解读</h3>
-          </div>
-          <div className="analysis-content">
-            <div className="financial-summary">
-              <div className="summary-item">
-                <span className="label">总收入</span>
-                <span className="value positive">{aiAnalysis.summary.totalIncome.toFixed(2)}元</span>
-              </div>
-              <div className="summary-item">
-                <span className="label">总支出</span>
-                <span className="value negative">{aiAnalysis.summary.totalExpense.toFixed(2)}元</span>
-              </div>
-              <div className="summary-item">
-                <span className="label">储蓄率</span>
-                <span className="value">{aiAnalysis.summary.savingRate}%</span>
-              </div>
-            </div>
-
-            <div className="category-analysis">
-              <h4>主要支出构成</h4>
-              <div className="category-chart">
-                {aiAnalysis.categoryDistribution.map((item, index) => (
-                  <div key={index} className="category-item">
-                    <div className="category-bar-container">
-                      <span className="category-name">{item.category}</span>
-                      <div className="category-bar">
-                        <div
-                          className="bar-fill"
-                          style={{ width: `${Math.min(100, item.percentage * 2)}%` }}
-                        ></div>
-                      </div>
-                      <span className="category-value">{item.percentage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {aiAnalysis.abnormalTransactions.length > 0 && (
-              <div className="abnormal-alert">
-                <h4>异常消费提醒</h4>
-                <div className="abnormal-list">
-                  {aiAnalysis.abnormalTransactions.slice(0, 2).map(item => (
-                    <div key={item.id} className="abnormal-item">
-                      <span className="merchant">{item.merchant}</span>
-                      <span className="amount negative">{item.amount.toFixed(2)}元</span>
-                      <span className="reason">{item.reason}</span>
-                    </div>
-                  ))}
-                  {aiAnalysis.abnormalTransactions.length > 2 && (
-                    <div className="more-alert">+{aiAnalysis.abnormalTransactions.length - 2}项异常交易</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="suggestions-section">
-              <h4>优化建议</h4>
-              <ul className="suggestions-list">
-                {aiAnalysis.suggestions.map((suggestion, index) => (
-                  <li key={index} className="suggestion-item">
-                    <span className="suggestion-icon">💡</span>
-                    <span className="suggestion-text">{suggestion}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+      {/* 添加手动触发AI分析按钮 */}
+      {!loading && aiAnalysisData && (
+        <div className="ai-trigger-bar">
+          <button 
+            className="ai-analysis-btn"
+            onClick={() => {
+              if (onShowAISuggestion) {
+                onShowAISuggestion('bill', { 
+                  bills,
+                  analysis: aiAnalysisData 
+                }, {
+                  autoShow: true,
+                  autoHideDelay: 0, // 手动触发时不自动隐藏
+                  speakEnabled: false
+                });
+              }
+            }}
+          >
+            <span className="ai-icon">🤖</span>
+            <span className="ai-text">查看AI消费分析</span>
+          </button>
         </div>
       )}
 

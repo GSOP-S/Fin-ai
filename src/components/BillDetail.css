@@ -4,6 +4,56 @@
   min-height: 100vh;
 }
 
+/* AI触发按钮样式 */
+.ai-trigger-bar {
+  margin: 20px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.ai-analysis-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.ai-analysis-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.ai-analysis-btn:active {
+  transform: translateY(0);
+}
+
+.ai-analysis-btn .ai-icon {
+  font-size: 20px;
+}
+
+.ai-analysis-btn .ai-text {
+  font-size: 15px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(102, 126, 234, 0.6);
+  }
+}
+
 .page-header {
   display: flex;
   align-items: center;

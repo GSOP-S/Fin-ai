@@ -30,54 +30,187 @@ function App() {
   const marketAnalysisTimeoutRef = useRef(null);
   const currentUtteranceRef = useRef(null);
 
-  // 生成市场分析和股票推荐 - 调用后端API
-  const generateMarketAnalysis = async () => {
+  // ===== 统一的AI建议管理系统 =====
+  
+  // 通用AI建议生成函数 - 根据页面类型和上下文调用不同的后端接口
+  const generateAISuggestion = async (pageType, context = {}) => {
     try {
-      const response = await fetch('http://localhost:5000/api/market-analysis');
+      const apiEndpoints = {
+        'home': '/api/home-suggestion',
+        'market': '/api/market-analysis',
+        'bill': '/api/bill-analysis',
+        'transfer': '/api/transfer-suggestion',
+        'stock': '/api/stock-suggestion',
+        'fund': '/api/fund-suggestion'
+      };
+      
+      const endpoint = apiEndpoints[pageType];
+      if (!endpoint) {
+        console.warn(`未知的页面类型: ${pageType}`);
+        return null;
+      }
+      
+      const isGetRequest = pageType === 'market';
+      const config = isGetRequest ? {
+        method: 'GET'
+      } : {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context)
+      };
+      
+      const response = await fetch(`http://localhost:5000${endpoint}`, config);
       const data = await response.json();
+      
       if (data.success) {
-        return data.data.analysis;
+        return data.data;
       } else {
-        console.error('获取市场分析失败:', data.error);
-        // 生成备用分析（模拟数据，实际应用中可替换为大模型API调用）
-        return '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
+        console.error(`获取${pageType}建议失败:`, data.error);
+        return getFallbackSuggestion(pageType, context);
       }
     } catch (error) {
-      console.error('市场分析API调用失败:', error);
-      // 生成备用分析（模拟数据，实际应用中可替换为大模型API调用）
-      return '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
+      console.error(`AI建议API调用失败(${pageType}):`, error);
+      return getFallbackSuggestion(pageType, context);
     }
   };
+  
+  // 备用建议生成（离线模式）
+  const getFallbackSuggestion = (pageType, context) => {
+    const fallbacks = {
+      'home': { 
+        suggestion: `欢迎回来！${user?.displayName || ''}。\n\n💡 今日建议：\n• 查看账单分析，了解本月消费情况\n• 关注理财产品，把握投资机会\n• 定期存款利率优惠中`
+      },
+      'market': { analysis: '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。' },
+      'bill': { 
+        summary: '本月总支出较上月有所增加，建议控制非必要支出。',
+        suggestions: ['餐饮支出占比较高，建议适当减少外出就餐', '储蓄率偏低，建议增加储蓄比例']
+      },
+      'transfer': {
+        recentAccounts: context.recentAccounts || [],
+        arrivalTime: '预计2小时内到账',
+        suggestion: context.suggestion || '建议核实收款人信息后再转账'
+      },
+      'stock': { suggestion: `${context.stock?.name || '该股票'} 建议谨慎操作，注意风险控制。` },
+      'fund': { suggestion: `${context.fund?.name || '该基金'} 建议长期持有，注意市场波动。` }
+    };
+    return fallbacks[pageType] || { suggestion: '暂无建议' };
+  };
+  
+  // 生成市场分析和股票推荐 - 调用后端API
+  const generateMarketAnalysis = async () => {
+    const result = await generateAISuggestion('market');
+    return result?.analysis || '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
+  };
 
-  // 生成股票建议 - 调用后端API
+  // 统一的AI建议展示函数
+  const showAISuggestion = async (pageType, context = {}, options = {}) => {
+    const {
+      autoShow = true,
+      autoHideDelay = 20000,
+      speakEnabled = true,
+      bubbleTitle = '💡 智能建议'
+    } = options;
+    
+    // 调用通用AI建议API
+    const result = await generateAISuggestion(pageType, context);
+    if (!result) return;
+    
+    // 格式化建议文本
+    let suggestionText = '';
+    if (typeof result === 'string') {
+      suggestionText = result;
+    } else if (result.suggestion) {
+      suggestionText = result.suggestion;
+    } else if (result.analysis) {
+      suggestionText = result.analysis;
+    } else {
+      // 处理复杂的建议对象（如账单分析）
+      suggestionText = formatComplexSuggestion(result);
+    }
+    
+    setCurrentSuggestion(suggestionText);
+    setCurrentSuggestionId(`${pageType}-${Date.now()}`);
+    setHasNewSuggestion(true);
+    
+    // 语音播报
+    if (speakEnabled) {
+      speakSuggestion(suggestionText);
+    }
+    
+    // 自动显示气泡
+    if (autoShow) {
+      setTimeout(() => {
+        setShowSuggestionBubble(true);
+        // 自动隐藏
+        if (autoHideDelay > 0) {
+          setTimeout(() => {
+            setShowSuggestionBubble(false);
+            setHasNewSuggestion(false);
+          }, autoHideDelay);
+        }
+      }, 1000);
+    }
+    
+    return result;
+  };
+  
+  // 格式化复杂建议对象为文本
+  const formatComplexSuggestion = (result) => {
+    let text = '';
+    
+    // 处理账单分析
+    if (result.summary) {
+      text += `📊 财务概览\n`;
+      if (result.summary.totalIncome) {
+        text += `总收入：${result.summary.totalIncome.toFixed(2)}元\n`;
+      }
+      if (result.summary.totalExpense) {
+        text += `总支出：${result.summary.totalExpense.toFixed(2)}元\n`;
+      }
+      if (result.summary.savingRate) {
+        text += `储蓄率：${result.summary.savingRate}%\n`;
+      }
+      text += '\n';
+    }
+    
+    // 处理建议列表
+    if (result.suggestions && result.suggestions.length > 0) {
+      text += `💡 优化建议\n`;
+      result.suggestions.forEach((suggestion, index) => {
+        text += `${index + 1}. ${suggestion}\n`;
+      });
+      text += '\n';
+    }
+    
+    // 处理异常提醒
+    if (result.abnormalTransactions && result.abnormalTransactions.length > 0) {
+      text += `⚠️ 异常消费提醒\n`;
+      result.abnormalTransactions.slice(0, 2).forEach(item => {
+        text += `${item.merchant}: ${item.amount.toFixed(2)}元 (${item.reason})\n`;
+      });
+    }
+    
+    // 处理转账建议
+    if (result.recentAccounts) {
+      text += `📋 最近转账账户\n`;
+      result.recentAccounts.slice(0, 3).forEach(acc => {
+        text += `${acc.name} ${acc.accountNumber}\n`;
+      });
+      text += '\n';
+    }
+    
+    if (result.arrivalTime) {
+      text += `⏰ 到账时间：${result.arrivalTime}\n`;
+    }
+    
+    return text.trim() || '暂无详细建议';
+  };
+  
+  // 生成股票建议 - 调用后端API（保留兼容性）
   const generateStockSuggestion = async (stock) => {
     if (!stock) return '';
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/stock-suggestion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ stock })
-      });
-      const data = await response.json();
-      if (data.success) {
-        return data.data.suggestion;
-      } else {
-        console.error('获取股票建议失败:', data.error);
-        // 备用逻辑（可替换为大模型API调用）
-        return stock.change >= 0 ? 
-          `${stock.name} 表现良好，可考虑关注。` : 
-          `${stock.name} 有所调整，建议观望。`;
-      }
-    } catch (error) {
-      console.error('股票建议API调用失败:', error);
-      // 备用逻辑（可替换为大模型API调用）
-      return stock.change >= 0 ? 
-        `${stock.name} 表现良好，可考虑关注。` : 
-        `${stock.name} 有所调整，建议观望。`;
-    }
+    const result = await generateAISuggestion('stock', { stock });
+    return result?.suggestion || `${stock.name} 建议谨慎操作，注意风险控制。`;
   };
 
   // 处理用户点击股票的操作
@@ -485,12 +618,18 @@ function App() {
       
       case 'account':
         return (
-          <BillDetail onNavigate={handleNavigate} />
+          <BillDetail 
+            onNavigate={handleNavigate}
+            onShowAISuggestion={showAISuggestion}
+          />
         );
       
       case 'transfer':
         return (
-          <TransferPage onNavigate={handleNavigate} />
+          <TransferPage 
+            onNavigate={handleNavigate}
+            onShowAISuggestion={showAISuggestion}
+          />
         );
       
       case 'deposit':
@@ -608,6 +747,55 @@ function App() {
     // 清除建议气泡
     setShowSuggestionBubble(false);
     setMarketAnalysisShown(false);
+    
+    // 延迟触发新页面的AI建议
+    setTimeout(() => {
+      triggerPageAISuggestion(page);
+    }, 1000);
+  };
+  
+  // 根据页面类型自动触发AI建议
+  const triggerPageAISuggestion = async (page) => {
+    if (!user) return; // 未登录不触发
+    
+    switch(page) {
+      case 'home':
+        // 首页显示欢迎和快捷操作建议
+        showAISuggestion('home', {}, {
+          autoShow: true,
+          autoHideDelay: 15000,
+          speakEnabled: false
+        });
+        break;
+        
+      case 'financing':
+        // 理财页面显示市场分析（已有逻辑，由useEffect处理）
+        break;
+        
+      case 'account':
+        // 账单页面由BillDetail组件内部处理
+        break;
+        
+      case 'transfer':
+        // 转账页面显示常用账户推荐
+        showAISuggestion('transfer', {
+          recentAccounts: [
+            {id: 1, name: '张三', accountNumber: '****1234'},
+            {id: 2, name: '李四', accountNumber: '****5678'},
+            {id: 3, name: '王五', accountNumber: '****9012'}
+          ],
+          suggestion: '您可以快速选择常用账户进行转账'
+        }, {
+          autoShow: true,
+          autoHideDelay: 20000,
+          speakEnabled: false
+        });
+        break;
+        
+      default:
+        // 其他页面不自动触发
+        break;
+    }
   };
 
   // 如果用户未登录，显示登录页面
@@ -671,8 +859,11 @@ function App() {
       <AIAssistant 
         isVisible={true}
         onClick={() => {
-          // 如果有显示的建议气泡，将其内容添加到聊天记录中
-          if (showSuggestionBubble && currentSuggestion) {
+          // 判断是打开还是关闭对话框
+          const willOpenChat = !showAIChat;
+          
+          // 如果要打开对话框，且有显示的建议气泡，将其内容添加到聊天记录中
+          if (willOpenChat && showSuggestionBubble && currentSuggestion) {
             // 创建AI消息
             const aiMessage = {
               type: 'ai',
@@ -692,22 +883,24 @@ function App() {
           }
           
           // 切换AI聊天窗口显示状态
-          setShowAIChat(!showAIChat);
+          setShowAIChat(willOpenChat);
           
-          // 滚动聊天窗口到底部
-          setTimeout(() => {
-            if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-            }
-          }, 100);
+          // 如果打开对话框，滚动到底部
+          if (willOpenChat) {
+            setTimeout(() => {
+              if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+              }
+            }, 100);
+          }
         }}
         onHover={handleAIAssistantHover}
         onLeave={handleAIAssistantLeave}
         hasNewSuggestion={hasNewSuggestion}
       />
 
-      {/* AI侧边气泡建议 */}
-      {showSuggestionBubble && currentSuggestion && (
+      {/* AI侧边气泡建议 - 只在对话框关闭时显示 */}
+      {showSuggestionBubble && currentSuggestion && !showAIChat && (
         <div className={`ai-suggestion-bubble ${marketAnalysisShown ? 'market-analysis' : ''}`}>
           <div className="ai-suggestion-header">
             <span className="ai-suggestion-title">
@@ -733,37 +926,73 @@ function App() {
             {currentSuggestion.split('\n').map((line, index) => (
               <p key={index} className="suggestion-line">{line}</p>
             ))}
-            <div className="feedback-buttons">
+            <div className="bubble-actions">
+              <div className="feedback-buttons">
+                <button 
+                  className="feedback-btn like-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFeedback('like');
+                  }}
+                  aria-label="有用"
+                >
+                  👍 有用
+                </button>
+                <button 
+                  className="feedback-btn dislike-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFeedback('dislike');
+                  }}
+                  aria-label="没用"
+                >
+                  👎 没用
+                </button>
+              </div>
               <button 
-                className="feedback-btn like-btn" 
+                className="open-chat-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleFeedback('like');
+                  // 将气泡内容添加到聊天记录
+                  const aiMessage = {
+                    type: 'ai',
+                    content: currentSuggestion,
+                    timestamp: new Date().toISOString()
+                  };
+                  setChatMessages(prev => [...prev, aiMessage]);
+                  
+                  // 停止语音播放
+                  if ('speechSynthesis' in window && speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                  }
+                  
+                  // 隐藏气泡并打开对话框
+                  setShowSuggestionBubble(false);
+                  setMarketAnalysisShown(false);
+                  setShowAIChat(true);
+                  
+                  // 滚动到底部
+                  setTimeout(() => {
+                    if (chatContainerRef.current) {
+                      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+                    }
+                  }, 100);
                 }}
-                aria-label="有用"
+                title="打开详细对话"
               >
-                👍 有用
+                💬 详细对话
               </button>
               <button 
-                className="feedback-btn dislike-btn" 
+                className="speak-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleFeedback('dislike');
+                  speakSuggestion(currentSuggestion);
                 }}
-                aria-label="没用"
+                title="语音播报"
               >
-                👎 没用
+                🔊
               </button>
             </div>
-            <button 
-              className="speak-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                speakSuggestion(currentSuggestion);
-              }}
-            >
-              🔊
-            </button>
           </div>
         </div>
       )}
