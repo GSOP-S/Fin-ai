@@ -4,6 +4,9 @@ import AIAssistant from './components/AIAssistant';
 import StockList from './components/StockList';
 import Login from './components/Login';
 import FundList from './components/FundList';
+import HomePage from './components/HomePage';
+import TransferPage from './components/TransferPage';
+import BillDetail from './components/BillDetail';
 
 function App() {
   const [selectedStock, setSelectedStock] = useState(null);
@@ -17,7 +20,8 @@ function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('stocks'); // 'stocks' 或 'funds'
+  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'account', 'transfer', 'financing', 'deposit', etc.
+  const [financingTab, setFinancingTab] = useState('stocks'); // 'stocks' 或 'funds'
   const [marketAnalysisShown, setMarketAnalysisShown] = useState(false);
   const [currentSuggestionId, setCurrentSuggestionId] = useState('');
   const appRef = useRef(null);
@@ -26,54 +30,187 @@ function App() {
   const marketAnalysisTimeoutRef = useRef(null);
   const currentUtteranceRef = useRef(null);
 
-  // 生成市场分析和股票推荐 - 调用后端API
-  const generateMarketAnalysis = async () => {
+  // ===== 统一的AI建议管理系统 =====
+  
+  // 通用AI建议生成函数 - 根据页面类型和上下文调用不同的后端接口
+  const generateAISuggestion = async (pageType, context = {}) => {
     try {
-      const response = await fetch('http://localhost:5000/api/market-analysis');
+      const apiEndpoints = {
+        'home': '/api/home-suggestion',
+        'market': '/api/market-analysis',
+        'bill': '/api/bill-analysis',
+        'transfer': '/api/transfer-suggestion',
+        'stock': '/api/stock-suggestion',
+        'fund': '/api/fund-suggestion'
+      };
+      
+      const endpoint = apiEndpoints[pageType];
+      if (!endpoint) {
+        console.warn(`未知的页面类型: ${pageType}`);
+        return null;
+      }
+      
+      const isGetRequest = pageType === 'market';
+      const config = isGetRequest ? {
+        method: 'GET'
+      } : {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context)
+      };
+      
+      const response = await fetch(`http://localhost:5000${endpoint}`, config);
       const data = await response.json();
+      
       if (data.success) {
-        return data.data.analysis;
+        return data.data;
       } else {
-        console.error('获取市场分析失败:', data.error);
-        // 生成备用分析（模拟数据，实际应用中可替换为大模型API调用）
-        return '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
+        console.error(`获取${pageType}建议失败:`, data.error);
+        return getFallbackSuggestion(pageType, context);
       }
     } catch (error) {
-      console.error('市场分析API调用失败:', error);
-      // 生成备用分析（模拟数据，实际应用中可替换为大模型API调用）
-      return '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
+      console.error(`AI建议API调用失败(${pageType}):`, error);
+      return getFallbackSuggestion(pageType, context);
     }
   };
+  
+  // 备用建议生成（离线模式）
+  const getFallbackSuggestion = (pageType, context) => {
+    const fallbacks = {
+      'home': { 
+        suggestion: `欢迎回来！${user?.displayName || ''}。\n\n💡 今日建议：\n• 查看账单分析，了解本月消费情况\n• 关注理财产品，把握投资机会\n• 定期存款利率优惠中`
+      },
+      'market': { analysis: '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。' },
+      'bill': { 
+        summary: '本月总支出较上月有所增加，建议控制非必要支出。',
+        suggestions: ['餐饮支出占比较高，建议适当减少外出就餐', '储蓄率偏低，建议增加储蓄比例']
+      },
+      'transfer': {
+        recentAccounts: context.recentAccounts || [],
+        arrivalTime: '预计2小时内到账',
+        suggestion: context.suggestion || '建议核实收款人信息后再转账'
+      },
+      'stock': { suggestion: `${context.stock?.name || '该股票'} 建议谨慎操作，注意风险控制。` },
+      'fund': { suggestion: `${context.fund?.name || '该基金'} 建议长期持有，注意市场波动。` }
+    };
+    return fallbacks[pageType] || { suggestion: '暂无建议' };
+  };
+  
+  // 生成市场分析和股票推荐 - 调用后端API
+  const generateMarketAnalysis = async () => {
+    const result = await generateAISuggestion('market');
+    return result?.analysis || '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
+  };
 
-  // 生成股票建议 - 调用后端API
+  // 统一的AI建议展示函数
+  const showAISuggestion = async (pageType, context = {}, options = {}) => {
+    const {
+      autoShow = true,
+      autoHideDelay = 20000,
+      speakEnabled = true,
+      bubbleTitle = '💡 智能建议'
+    } = options;
+    
+    // 调用通用AI建议API
+    const result = await generateAISuggestion(pageType, context);
+    if (!result) return;
+    
+    // 格式化建议文本
+    let suggestionText = '';
+    if (typeof result === 'string') {
+      suggestionText = result;
+    } else if (result.suggestion) {
+      suggestionText = result.suggestion;
+    } else if (result.analysis) {
+      suggestionText = result.analysis;
+    } else {
+      // 处理复杂的建议对象（如账单分析）
+      suggestionText = formatComplexSuggestion(result);
+    }
+    
+    setCurrentSuggestion(suggestionText);
+    setCurrentSuggestionId(`${pageType}-${Date.now()}`);
+    setHasNewSuggestion(true);
+    
+    // 语音播报
+    if (speakEnabled) {
+      speakSuggestion(suggestionText);
+    }
+    
+    // 自动显示气泡
+    if (autoShow) {
+      setTimeout(() => {
+        setShowSuggestionBubble(true);
+        // 自动隐藏
+        if (autoHideDelay > 0) {
+          setTimeout(() => {
+            setShowSuggestionBubble(false);
+            setHasNewSuggestion(false);
+          }, autoHideDelay);
+        }
+      }, 1000);
+    }
+    
+    return result;
+  };
+  
+  // 格式化复杂建议对象为文本
+  const formatComplexSuggestion = (result) => {
+    let text = '';
+    
+    // 处理账单分析
+    if (result.summary) {
+      text += `📊 财务概览\n`;
+      if (result.summary.totalIncome) {
+        text += `总收入：${result.summary.totalIncome.toFixed(2)}元\n`;
+      }
+      if (result.summary.totalExpense) {
+        text += `总支出：${result.summary.totalExpense.toFixed(2)}元\n`;
+      }
+      if (result.summary.savingRate) {
+        text += `储蓄率：${result.summary.savingRate}%\n`;
+      }
+      text += '\n';
+    }
+    
+    // 处理建议列表
+    if (result.suggestions && result.suggestions.length > 0) {
+      text += `💡 优化建议\n`;
+      result.suggestions.forEach((suggestion, index) => {
+        text += `${index + 1}. ${suggestion}\n`;
+      });
+      text += '\n';
+    }
+    
+    // 处理异常提醒
+    if (result.abnormalTransactions && result.abnormalTransactions.length > 0) {
+      text += `⚠️ 异常消费提醒\n`;
+      result.abnormalTransactions.slice(0, 2).forEach(item => {
+        text += `${item.merchant}: ${item.amount.toFixed(2)}元 (${item.reason})\n`;
+      });
+    }
+    
+    // 处理转账建议
+    if (result.recentAccounts) {
+      text += `📋 最近转账账户\n`;
+      result.recentAccounts.slice(0, 3).forEach(acc => {
+        text += `${acc.name} ${acc.accountNumber}\n`;
+      });
+      text += '\n';
+    }
+    
+    if (result.arrivalTime) {
+      text += `⏰ 到账时间：${result.arrivalTime}\n`;
+    }
+    
+    return text.trim() || '暂无详细建议';
+  };
+  
+  // 生成股票建议 - 调用后端API（保留兼容性）
   const generateStockSuggestion = async (stock) => {
     if (!stock) return '';
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/stock-suggestion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ stock })
-      });
-      const data = await response.json();
-      if (data.success) {
-        return data.data.suggestion;
-      } else {
-        console.error('获取股票建议失败:', data.error);
-        // 备用逻辑（可替换为大模型API调用）
-        return stock.change >= 0 ? 
-          `${stock.name} 表现良好，可考虑关注。` : 
-          `${stock.name} 有所调整，建议观望。`;
-      }
-    } catch (error) {
-      console.error('股票建议API调用失败:', error);
-      // 备用逻辑（可替换为大模型API调用）
-      return stock.change >= 0 ? 
-        `${stock.name} 表现良好，可考虑关注。` : 
-        `${stock.name} 有所调整，建议观望。`;
-    }
+    const result = await generateAISuggestion('stock', { stock });
+    return result?.suggestion || `${stock.name} 建议谨慎操作，注意风险控制。`;
   };
 
   // 处理用户点击股票的操作
@@ -195,10 +332,10 @@ function App() {
       setHasNewSuggestion(false);
       setCurrentSuggestionId(`fund-${fund.code}-${Date.now()}`);
       
-      // 10秒后自动隐藏气泡
+      // 20秒后自动隐藏气泡
       setTimeout(() => {
         setShowSuggestionBubble(false);
-      }, 10000);
+      }, 20000);
     } catch (error) {
       console.error('基金建议API调用失败:', error);
       // 备用建议
@@ -208,10 +345,10 @@ function App() {
       setHasNewSuggestion(false);
       setCurrentSuggestionId(`fund-${fund.code}-${Date.now()}`);
       
-      // 10秒后自动隐藏气泡
+      // 20秒后自动隐藏气泡
       setTimeout(() => {
         setShowSuggestionBubble(false);
-      }, 10000);
+      }, 20000);
     }
   };
 
@@ -397,11 +534,15 @@ function App() {
 
   // 渲染当前内容
   const renderContent = () => {
+    // 详情页优先渲染
     // 如果有选中的股票，显示股票详情
     if (selectedStock) {
       return (
         <div className="stock-detail">
-          <button className="back-btn" onClick={() => setSelectedStock(null)}>返回</button>
+          <button className="back-btn" onClick={() => {
+            setSelectedStock(null);
+            handleNavigate('financing');
+          }}>返回</button>
           <h2>{selectedStock.name} ({selectedStock.code})</h2>
           <div className="stock-price">{selectedStock.price}元</div>
           <div className="stock-change">{selectedStock.change} ({selectedStock.changePercent})</div>
@@ -418,7 +559,10 @@ function App() {
     if (selectedFund) {
       return (
         <div className="fund-detail">
-          <button className="back-btn" onClick={() => setSelectedFund(null)}>返回</button>
+          <button className="back-btn" onClick={() => {
+            setSelectedFund(null);
+            handleNavigate('financing');
+          }}>返回</button>
           <h2>{selectedFund.name} ({selectedFund.code})</h2>
           <div className="fund-nav">净值：{Number(selectedFund.nav)?.toFixed(4) || '0.0000'}元</div>
           <div className={`fund-change ${selectedFund.change.startsWith('+') ? 'positive' : 'negative'}`}>
@@ -433,29 +577,126 @@ function App() {
       );
     }
 
-    // 根据当前选中的标签显示对应内容
-    if (activeTab === 'stocks') {
-      return (
-        <StockList 
-          onSelectStock={handleStockSelect}
-          onStockHover={handleStockHover}
-          onStockLeave={handleStockLeave}
-        />
-      );
-    } else {
-      return (
-        <FundList 
-          onSelectFund={handleSelectFund}
-        />
-      );
+    // 根据当前页面渲染不同内容
+    switch (currentPage) {
+      case 'home':
+        return <HomePage onNavigate={handleNavigate} />;
+      
+      case 'financing':
+        // 理财页面显示股票和基金标签
+        return (
+          <div className="financing-container">
+            <div className="financing-tabs">
+              <button 
+                className={`financing-tab ${financingTab === 'stocks' ? 'active' : ''}`}
+                onClick={() => setFinancingTab('stocks')}
+              >
+                股票
+              </button>
+              <button 
+                className={`financing-tab ${financingTab === 'funds' ? 'active' : ''}`}
+                onClick={() => setFinancingTab('funds')}
+              >
+                基金
+              </button>
+            </div>
+            <div className="financing-content">
+              {financingTab === 'stocks' ? (
+                <StockList 
+                  onSelectStock={handleStockSelect}
+                  onStockHover={handleStockHover}
+                  onStockLeave={handleStockLeave}
+                />
+              ) : (
+                <FundList 
+                  onSelectFund={handleSelectFund}
+                />
+              )}
+            </div>
+          </div>
+        );
+      
+      case 'account':
+        return (
+          <BillDetail 
+            onNavigate={handleNavigate}
+            onShowAISuggestion={showAISuggestion}
+          />
+        );
+      
+      case 'transfer':
+        return (
+          <TransferPage 
+            onNavigate={handleNavigate}
+            onShowAISuggestion={showAISuggestion}
+          />
+        );
+      
+      case 'deposit':
+        return (
+          <div className="page-container">
+            <button className="back-btn" onClick={() => handleNavigate('home')}>返回首页</button>
+            <h1>定期存款</h1>
+            <p>此处将显示定期存款产品...</p>
+          </div>
+        );
+      
+      default:
+        // 其他页面暂时返回提示信息
+        return (
+          <div className="page-container">
+            <button className="back-btn" onClick={() => handleNavigate('home')}>返回首页</button>
+            <h1>{getPageTitle(currentPage)}</h1>
+            <p>功能正在开发中，敬请期待...</p>
+          </div>
+        );
     }
   };
-
+  
+  // 获取页面标题
+  const getPageTitle = (page) => {
+    const titles = {
+      'home': '首页',
+      'account': '账户明细',
+      'transfer': '转账汇款',
+      'financing': '投资理财',
+      'deposit': '定期存款',
+      'creditCard': '信用卡',
+      'insurance': '保险服务',
+      'loan': '贷款服务',
+      'scan': '扫一扫',
+      'withdraw': '取款',
+      'more': '更多服务'
+    };
+    return titles[page] || '功能页面';
+  };
+  
+  // 监听financingTab的变化，确保从HomePage点击推荐产品时能正确设置标签
+  useEffect(() => {
+    const checkTabChange = () => {
+      if (window.financingTab) {
+        setFinancingTab(window.financingTab);
+        // 清除全局变量
+        delete window.financingTab;
+      }
+    };
+    
+    // 立即检查一次
+    checkTabChange();
+    
+    // 添加窗口事件监听器（可选）
+    window.addEventListener('tabchange', checkTabChange);
+    
+    return () => {
+      window.removeEventListener('tabchange', checkTabChange);
+    };
+  }, []);
+  
   // 显示市场分析气泡 - 在用户登录或切换到列表页面时触发
   useEffect(() => {
-    // 只有在用户已登录且在列表页面时才显示
+    // 只有在用户已登录且在理财页面（股票或基金列表）时才显示
     const fetchMarketAnalysis = async () => {
-      if (user && !selectedStock && !selectedFund && !marketAnalysisShown) {
+      if (user && currentPage === 'financing' && !selectedStock && !selectedFund && !marketAnalysisShown) {
         try {
           const analysis = await generateMarketAnalysis();
           setCurrentSuggestion(analysis);
@@ -484,15 +725,78 @@ function App() {
         clearTimeout(marketAnalysisTimeoutRef.current);
       }
     };
-  }, [user, selectedStock, selectedFund]);
+  }, [user, currentPage, selectedStock, selectedFund]);
   
-  // 当返回列表页面时重置marketAnalysisShown状态，以便再次显示市场分析
+  // 当返回理财列表页面时重置marketAnalysisShown状态
   useEffect(() => {
     // 当离开详情页返回到列表页时，重置marketAnalysisShown状态
-    if (!selectedStock && !selectedFund) {
+    if (currentPage === 'financing' && !selectedStock && !selectedFund) {
       setMarketAnalysisShown(false);
     }
-  }, [selectedStock, selectedFund]);
+  }, [currentPage, selectedStock, selectedFund]);
+  
+  // 处理页面导航
+  const handleNavigate = (page) => {
+    // 清除详情页状态
+    setSelectedStock(null);
+    setSelectedFund(null);
+    
+    // 设置当前页面
+    setCurrentPage(page);
+    
+    // 清除建议气泡
+    setShowSuggestionBubble(false);
+    setMarketAnalysisShown(false);
+    
+    // 延迟触发新页面的AI建议
+    setTimeout(() => {
+      triggerPageAISuggestion(page);
+    }, 1000);
+  };
+  
+  // 根据页面类型自动触发AI建议
+  const triggerPageAISuggestion = async (page) => {
+    if (!user) return; // 未登录不触发
+    
+    switch(page) {
+      case 'home':
+        // 首页显示欢迎和快捷操作建议
+        showAISuggestion('home', {}, {
+          autoShow: true,
+          autoHideDelay: 15000,
+          speakEnabled: false
+        });
+        break;
+        
+      case 'financing':
+        // 理财页面显示市场分析（已有逻辑，由useEffect处理）
+        break;
+        
+      case 'account':
+        // 账单页面由BillDetail组件内部处理
+        break;
+        
+      case 'transfer':
+        // 转账页面显示常用账户推荐
+        showAISuggestion('transfer', {
+          recentAccounts: [
+            {id: 1, name: '张三', accountNumber: '****1234'},
+            {id: 2, name: '李四', accountNumber: '****5678'},
+            {id: 3, name: '王五', accountNumber: '****9012'}
+          ],
+          suggestion: '您可以快速选择常用账户进行转账'
+        }, {
+          autoShow: true,
+          autoHideDelay: 20000,
+          speakEnabled: false
+        });
+        break;
+        
+      default:
+        // 其他页面不自动触发
+        break;
+    }
+  };
 
   // 如果用户未登录，显示登录页面
   if (!user) {
@@ -501,51 +805,65 @@ function App() {
 
   return (
     <div className="app" ref={appRef}>
-      <header className="app-header">
-        <div className="header-content">
-          <h1>金融理财APP</h1>
-          <div className="user-info">
-            <span className="welcome-text">欢迎，{user.displayName}</span>
+      {/* 只有在非首页且非详情页时显示顶部导航栏 */}
+      {(currentPage !== 'home' && !selectedStock && !selectedFund) && (
+        <header className="app-header">
+          <div className="header-content">
+            <h1>{getPageTitle(currentPage)}</h1>
+            <div className="user-info">
+              <span className="welcome-text">欢迎，{user.displayName}</span>
+            </div>
           </div>
-        </div>
-        
-        {/* 导航标签 */}
-        <div className="nav-tabs">
-          <button 
-            className={`nav-tab ${activeTab === 'stocks' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('stocks');
-              // 如果在详情页，切换标签时需要清除选中状态
-              setSelectedStock(null);
-              setSelectedFund(null);
-            }}
-          >
-            股票
-          </button>
-          <button 
-            className={`nav-tab ${activeTab === 'funds' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('funds');
-              // 如果在详情页，切换标签时需要清除选中状态
-              setSelectedStock(null);
-              setSelectedFund(null);
-            }}
-          >
-            基金
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
       
       <main className="app-content">
         {renderContent()}
       </main>
+      
+      {/* 底部导航栏，仅在首页和理财页显示 */}
+      {(currentPage === 'home' || currentPage === 'financing') && !selectedStock && !selectedFund && (
+        <nav className="bottom-nav">
+          <button 
+            className={`nav-item ${currentPage === 'home' ? 'active' : ''}`}
+            onClick={() => handleNavigate('home')}
+          >
+            <span className="nav-icon">🏠</span>
+            <span className="nav-text">首页</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'account' ? 'active' : ''}`}
+            onClick={() => handleNavigate('account')}
+          >
+            <span className="nav-icon">📊</span>
+            <span className="nav-text">账户</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'financing' ? 'active' : ''}`}
+            onClick={() => handleNavigate('financing')}
+          >
+            <span className="nav-icon">💰</span>
+            <span className="nav-text">理财</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'more' ? 'active' : ''}`}
+            onClick={() => handleNavigate('more')}
+          >
+            <span className="nav-icon">⋮⋮</span>
+            <span className="nav-text">更多</span>
+          </button>
+        </nav>
+      )}
 
       {/* 悬浮AI助手按钮 */}
       <AIAssistant 
         isVisible={true}
         onClick={() => {
-          // 如果有显示的建议气泡，将其内容添加到聊天记录中
-          if (showSuggestionBubble && currentSuggestion) {
+          // 判断是打开还是关闭对话框
+          const willOpenChat = !showAIChat;
+          
+          // 如果要打开对话框，且有显示的建议气泡，将其内容添加到聊天记录中
+          if (willOpenChat && showSuggestionBubble && currentSuggestion) {
             // 创建AI消息
             const aiMessage = {
               type: 'ai',
@@ -565,22 +883,24 @@ function App() {
           }
           
           // 切换AI聊天窗口显示状态
-          setShowAIChat(!showAIChat);
+          setShowAIChat(willOpenChat);
           
-          // 滚动聊天窗口到底部
-          setTimeout(() => {
-            if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-            }
-          }, 100);
+          // 如果打开对话框，滚动到底部
+          if (willOpenChat) {
+            setTimeout(() => {
+              if (chatContainerRef.current) {
+                chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+              }
+            }, 100);
+          }
         }}
         onHover={handleAIAssistantHover}
         onLeave={handleAIAssistantLeave}
         hasNewSuggestion={hasNewSuggestion}
       />
 
-      {/* AI侧边气泡建议 */}
-      {showSuggestionBubble && currentSuggestion && (
+      {/* AI侧边气泡建议 - 只在对话框关闭时显示 */}
+      {showSuggestionBubble && currentSuggestion && !showAIChat && (
         <div className={`ai-suggestion-bubble ${marketAnalysisShown ? 'market-analysis' : ''}`}>
           <div className="ai-suggestion-header">
             <span className="ai-suggestion-title">
@@ -606,37 +926,73 @@ function App() {
             {currentSuggestion.split('\n').map((line, index) => (
               <p key={index} className="suggestion-line">{line}</p>
             ))}
-            <div className="feedback-buttons">
+            <div className="bubble-actions">
+              <div className="feedback-buttons">
+                <button 
+                  className="feedback-btn like-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFeedback('like');
+                  }}
+                  aria-label="有用"
+                >
+                  👍 有用
+                </button>
+                <button 
+                  className="feedback-btn dislike-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFeedback('dislike');
+                  }}
+                  aria-label="没用"
+                >
+                  👎 没用
+                </button>
+              </div>
               <button 
-                className="feedback-btn like-btn" 
+                className="open-chat-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleFeedback('like');
+                  // 将气泡内容添加到聊天记录
+                  const aiMessage = {
+                    type: 'ai',
+                    content: currentSuggestion,
+                    timestamp: new Date().toISOString()
+                  };
+                  setChatMessages(prev => [...prev, aiMessage]);
+                  
+                  // 停止语音播放
+                  if ('speechSynthesis' in window && speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                  }
+                  
+                  // 隐藏气泡并打开对话框
+                  setShowSuggestionBubble(false);
+                  setMarketAnalysisShown(false);
+                  setShowAIChat(true);
+                  
+                  // 滚动到底部
+                  setTimeout(() => {
+                    if (chatContainerRef.current) {
+                      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+                    }
+                  }, 100);
                 }}
-                aria-label="有用"
+                title="打开详细对话"
               >
-                👍 有用
+                💬 详细对话
               </button>
               <button 
-                className="feedback-btn dislike-btn" 
+                className="speak-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleFeedback('dislike');
+                  speakSuggestion(currentSuggestion);
                 }}
-                aria-label="没用"
+                title="语音播报"
               >
-                👎 没用
+                🔊
               </button>
             </div>
-            <button 
-              className="speak-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                speakSuggestion(currentSuggestion);
-              }}
-            >
-              🔊
-            </button>
           </div>
         </div>
       )}
@@ -652,7 +1008,7 @@ function App() {
           <div className="ai-chat-messages" ref={chatContainerRef}>
             {chatMessages.length === 0 ? (
               <div className="ai-chat-placeholder">
-                你好！我是股票智能助手，请问有什么可以帮助你的？
+                你好！我是您的智能助手，请问有什么可以帮助你的？
               </div>
             ) : (
               chatMessages.map((message, index) => (
