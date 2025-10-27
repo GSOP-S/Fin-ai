@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Login.css';
+import { loginUser } from '../api/user';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
@@ -16,33 +17,18 @@ const Login = ({ onLogin }) => {
     }
 
     try {
-      // 调用后端登录API
-      const response = await fetch('http://localhost:5000/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // 登录成功，调用父组件的onLogin方法
+      const result = await loginUser({ username, password });
+      if (result.success) {
         const user = {
-          username: data.data.username,
-          displayName: data.data.display_name
+          username: result.data.username,
+          displayName: result.data.display_name,
         };
         onLogin(user);
         setError('');
-      } else {
-        // 登录失败，显示错误信息
-        setError(data.message || '用户名或密码错误');
       }
     } catch (error) {
-      // 网络错误或其他异常
       console.error('登录失败:', error);
-      setError('登录过程中发生错误，请稍后重试');
+      setError(error.message || '登录过程中发生错误，请稍后重试');
     }
   };
 

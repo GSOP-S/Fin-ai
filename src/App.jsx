@@ -7,6 +7,9 @@ import FundList from './components/FundList';
 import HomePage from './components/HomePage';
 import TransferPage from './components/TransferPage';
 import BillDetail from './components/BillDetail';
+import { getPageSuggestion, generateAIResponse } from './api/ai';
+import { submitFeedback } from './api/feedback';
+import request from './api/request';
 
 function App() {
   const [selectedStock, setSelectedStock] = useState(null);
@@ -35,37 +38,11 @@ function App() {
   // 通用AI建议生成函数 - 根据页面类型和上下文调用不同的后端接口
   const generateAISuggestion = async (pageType, context = {}) => {
     try {
-      const apiEndpoints = {
-        'home': '/api/home-suggestion',
-        'market': '/api/market-analysis',
-        'bill': '/api/bill-analysis',
-        'transfer': '/api/transfer-suggestion',
-        'stock': '/api/stock-suggestion',
-        'fund': '/api/fund-suggestion'
-      };
-      
-      const endpoint = apiEndpoints[pageType];
-      if (!endpoint) {
-        console.warn(`未知的页面类型: ${pageType}`);
-        return null;
-      }
-      
-      const isGetRequest = pageType === 'market';
-      const config = isGetRequest ? {
-        method: 'GET'
-      } : {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(context)
-      };
-      
-      const response = await fetch(`http://localhost:5000${endpoint}`, config);
-      const data = await response.json();
-      
-      if (data.success) {
-        return data.data;
+      const result = await getPageSuggestion(pageType, context);
+      if (result.success) {
+        return result.data;
       } else {
-        console.error(`获取${pageType}建议失败:`, data.error);
+        console.error(`获取${pageType}建议失败:`, result.error);
         return getFallbackSuggestion(pageType, context);
       }
     } catch (error) {
@@ -83,7 +60,7 @@ function App() {
       'market': { analysis: '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。' },
       'bill': { 
         summary: '本月总支出较上月有所增加，建议控制非必要支出。',
-        suggestions: ['餐饮支出占比较高，建议适当减少外出就餐', '储蓄率偏低，建议增加储蓄比例']
+        suggestions: ['餐饮支出占较高，建议适当减少外出就餐', '储蓄率偏低，建议增加储蓄比例']
       },
       'transfer': {
         recentAccounts: context.recentAccounts || [],
@@ -305,25 +282,19 @@ function App() {
 
   // 处理选择基金
   const handleSelectFund = async (fund) => {
-    setSelectedFund(fund);
-    
-    // 调用后端API生成基金建议
     try {
-      const response = await fetch('http://localhost:5000/api/fund-suggestion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fund })
-      });
-      const data = await response.json();
+      setSelectedFund(fund);
       
+      // 调用后端API生成基金建议
+      const result = await request('/api/fund-suggestion', {
+        method: 'POST',
+        body: JSON.stringify({ fund }),
+      });
       let suggestion;
-      if (data.success) {
-        suggestion = data.data.suggestion;
+      if (result.success) {
+        suggestion = result.data.suggestion;
       } else {
-        console.error('获取基金建议失败:', data.error);
-        // 备用逻辑（可替换为大模型API调用）
+        console.error('获取基金建议失败:', result.error);
         suggestion = `基金建议：${fund.name} 可作为您投资组合的一个选择。`;
       }
       
@@ -351,81 +322,34 @@ function App() {
       }, 20000);
     }
   };
-
-  // 处理用户反馈
-  const handleFeedback = async (type, comment = '') => {
-    if (!currentSuggestionId || !currentSuggestion) return;
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          suggestionId: currentSuggestionId,
-          content: currentSuggestion,
-          type,
-          comment
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        console.log('反馈提交成功');
-        // 显示感谢信息
-        alert('感谢您的反馈！');
-        // 关闭建议气泡
-        setShowSuggestionBubble(false);
-      } else {
-        console.error('反馈提交失败:', data.error);
-      }
-    } catch (error) {
-      console.error('反馈API调用失败:', error);
-    }
-  };
-
+  
   // 处理鼠标悬停在股票上
   const handleStockHover = (stock) => {
     setHoveredStock(stock);
   };
-
+  
   // 处理鼠标离开股票
   const handleStockLeave = () => {
     setHoveredStock(null);
   };
-
+  
   // 调用AI助手接口（用于外部调用）
   const callAIAssistant = async (prompt, context = {}) => {
-    // 这里是接入大模型的接口
     try {
-      // 实际应用中会调用真实的大模型API或后端接口
-      const response = await fetch('http://localhost:5000/api/ai-assistant', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ prompt, context })
-      });
-      
-      if (!response.ok) {
-        throw new Error('网络响应错误');
-      }
-      
-      return await response.json();
+      const result = await generateAIResponse(prompt, context);
+      return result;
     } catch (error) {
       console.error('调用AI助手失败:', error);
-      // 模拟AI处理过程作为备用
       return {
         success: true,
         data: {
           response: `AI分析调用失败，请稍后再试。`,
-          context: context
-        }
+          context: context,
+        },
       };
     }
   };
-
+  
   // 语音读出建议功能
   const speakSuggestion = (text) => {
     if ('speechSynthesis' in window) {
@@ -443,7 +367,7 @@ function App() {
       speechSynthesis.speak(utterance);
     }
   };
-
+  
   // 处理语音输入
   const handleVoiceInput = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -471,7 +395,7 @@ function App() {
       console.log('您的浏览器不支持语音识别功能');
     }
   };
-
+  
   // 发送消息到AI聊天
   const sendToAIAssistant = async () => {
     if (!userInput.trim()) return;
@@ -504,7 +428,6 @@ function App() {
       
       // 更新消息，移除加载状态并添加AI回复
       setChatMessages(prev => prev.filter(msg => !msg.loading));
-      
       if (result.success) {
         const aiMessage = {
           type: 'ai',
@@ -531,7 +454,7 @@ function App() {
       }
     }, 100);
   };
-
+  
   // 渲染当前内容
   const renderContent = () => {
     // 详情页优先渲染
@@ -554,7 +477,7 @@ function App() {
         </div>
       );
     }
-
+  
     // 如果有选中的基金，显示基金详情
     if (selectedFund) {
       return (
@@ -576,7 +499,7 @@ function App() {
         </div>
       );
     }
-
+  
     // 根据当前页面渲染不同内容
     switch (currentPage) {
       case 'home':
@@ -719,7 +642,7 @@ function App() {
     };
     
     fetchMarketAnalysis();
-
+  
     return () => {
       if (marketAnalysisTimeoutRef.current) {
         clearTimeout(marketAnalysisTimeoutRef.current);
@@ -797,12 +720,12 @@ function App() {
         break;
     }
   };
-
+  
   // 如果用户未登录，显示登录页面
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
-
+  
   return (
     <div className="app" ref={appRef}>
       {/* 只有在非首页且非详情页时显示顶部导航栏 */}
@@ -854,7 +777,7 @@ function App() {
           </button>
         </nav>
       )}
-
+  
       {/* 悬浮AI助手按钮 */}
       <AIAssistant 
         isVisible={true}
@@ -898,7 +821,7 @@ function App() {
         onLeave={handleAIAssistantLeave}
         hasNewSuggestion={hasNewSuggestion}
       />
-
+  
       {/* AI侧边气泡建议 - 只在对话框关闭时显示 */}
       {showSuggestionBubble && currentSuggestion && !showAIChat && (
         <div className={`ai-suggestion-bubble ${marketAnalysisShown ? 'market-analysis' : ''}`}>
@@ -996,7 +919,7 @@ function App() {
           </div>
         </div>
       )}
-
+  
       {/* AI聊天窗口 */}
       {showAIChat && (
         <div className="ai-chat-container">

@@ -52,6 +52,9 @@ class TransferSuggestionService:
         
         # TODO: 接入大模型API，生成更个性化的建议
         # ai_suggestion = self._call_ai_model(user_id, context, risk_level)
+        ai_suggestion = self._call_ai_model(user_id, context, risk_level)
+        if ai_suggestion:
+            suggestion = ai_suggestion
         
         return {
             'recentAccounts': recent_accounts,
@@ -163,10 +166,18 @@ class TransferSuggestionService:
     
     def _call_ai_model(self, user_id: str, context: Dict, risk_level: str) -> str:
         """
-        调用大模型API生成智能建议
-        
-        TODO: 接入大模型
+        调用大模型API生成智能建议，失败时返回 None
         """
-        # 预留接口
-        return None
+        try:
+            from services.model_provider import ModelProvider
+            model = ModelProvider()
+            prompt = (
+                "你是一名资深金融理财助手，请根据以下转账场景给出3条精炼的转账建议（每条不超过40字，中文）：\n"\
+                f"收款账户: {context.get('recipientAccount')}，账户类型: {context.get('accountType')}，"\
+                f"首次转账: {context.get('isFirstTimeAccount')}，金额: {context.get('amount')} 元，风险等级: {risk_level}。"
+            )
+            return model.generate(prompt, context={"type": "transfer"})
+        except Exception as exc:
+            print(f"[TransferSuggestionService] AI 调用失败: {exc}")
+            return None
 

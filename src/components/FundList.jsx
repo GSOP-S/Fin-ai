@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './FundList.css';
-import AIAnalysisPanel from './AIAnalysisPanel';
+import { fetchFundList } from '../api/fund';
 
 const FundList = () => {
   const [selectedFund, setSelectedFund] = useState(null);
@@ -24,107 +24,36 @@ const FundList = () => {
     orderDir: 'asc'
   });
 
-  // 模拟基金数据
-  const mockFunds = [
-    {
-      id: '000001',
-      name: '易方达蓝筹精选混合',
-      code: '005827',
-      nav: 2.8745,
-      changePercent: '2.13%',
-      change: '+0.0598',
-      category: '混合型',
-      risk: '中高风险',
-      manager: '张坤'
-    },
-    {
-      id: '000002',
-      name: '诺安成长混合',
-      code: '320007',
-      nav: 1.7654,
-      changePercent: '-1.24%',
-      change: '-0.0222',
-      category: '混合型',
-      risk: '高风险',
-      manager: '蔡嵩松'
-    },
-    {
-      id: '000003',
-      name: '华夏回报混合A',
-      code: '002001',
-      nav: 3.2456,
-      changePercent: '0.89%',
-      change: '+0.0288',
-      category: '混合型',
-      risk: '中风险',
-      manager: '王宗合'
-    },
-    {
-      id: '000004',
-      name: '富国天惠成长混合A',
-      code: '161005',
-      nav: 4.5678,
-      changePercent: '1.56%',
-      change: '+0.0695',
-      category: '混合型',
-      risk: '中高风险',
-      manager: '朱少醒'
-    },
-    {
-      id: '000005',
-      name: '兴全合润混合',
-      code: '163406',
-      nav: 3.8923,
-      changePercent: '1.23%',
-      change: '+0.0473',
-      category: '混合型',
-      risk: '中高风险',
-      manager: '谢治宇'
-    }
-  ];
 
   // 从后端获取基金数据 - 支持分页、筛选和排序
   const fetchFunds = async (page = 1, filterOptions = filters) => {
     setLoading(true);
+    setError('');
     try {
-      // 构建查询参数
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pagination.pageSize.toString(),
+      const params = {
+        page,
+        pageSize: pagination.pageSize,
         orderBy: filterOptions.orderBy,
-        orderDir: filterOptions.orderDir
-      });
+        orderDir: filterOptions.orderDir,
+      };
+      if (filterOptions.category) params.category = filterOptions.category;
+      if (filterOptions.riskLevel) params.riskLevel = filterOptions.riskLevel;
+
+      const result = await fetchFundList(params);
       
-      // 添加类别和风险等级筛选
-      if (filterOptions.category) {
-        params.append('category', filterOptions.category);
-      }
-      if (filterOptions.riskLevel) {
-        params.append('riskLevel', filterOptions.riskLevel);
-      }
-      
-      // 调用后端API获取基金列表
-      const response = await fetch(`http://localhost:5000/api/funds?${params.toString()}`);
-      const data = await response.json();
-      
-      // 检查数据是否存在
-      if (data && data.data) {
-        // 更新分页信息
-        if (data.pagination) {
-          setPagination(data.pagination);
-        }
-        
-        // 如果后端数据为空但有模拟数据，使用模拟数据
-        if (data.data.length === 0 && mockFunds.length > 0) {
-          setFunds(mockFunds);
-        } else {
-          setFunds(data.data);
-        }
+      // 处理统一后端响应结构 { success, data, message }
+      if (result.success && result.data) {
+        // 从 data 中提取分页信息和基金数据
+        if (result.data.pagination) setPagination(result.data.pagination);
+        // 确保 funds 是数组 - 后端返回的是 data.data
+        setFunds(Array.isArray(result.data.data) ? result.data.data : []);
+        console.log("获取到基金数据:", result.data);
       } else {
-        setError('获取基金列表失败: 无效的响应格式');
+        setFunds([]);
+        throw new Error(result.message || '获取基金数据失败');
       }
     } catch (err) {
-      setError('获取基金数据失败，请稍后重试');
+      setError(err.message || '获取基金数据失败，请稍后重试');
       console.error('获取基金数据失败:', err);
     } finally {
       setLoading(false);
@@ -175,6 +104,18 @@ const FundList = () => {
             <p>{error}</p>
             <button onClick={() => fetchFunds()} className="retry-btn">重试</button>
           </div>
+        </div>
+      );
+    }
+
+   // 无数据提示
+    if (!loading && funds.length === 0) {
+      return (
+        <div className="fund-list-container">
+          <div className="fund-list-header">
+            <h2>基金列表</h2>
+          </div>
+          <p style={{ textAlign: 'center', padding: '20px 0' }}>暂无数据</p>
         </div>
       );
     }
@@ -243,9 +184,9 @@ const FundList = () => {
                 <div className="fund-code">{fund.code}</div>
               </div>
               <div className="fund-details">
-                <div className="fund-nav">{Number(fund.nav)?.toFixed(4) || '0.0000'}</div>
-                <div className={`fund-change ${fund.change.startsWith('+') ? 'positive' : 'negative'}`}>
-                  {fund.changePercent}
+                <div className="fund-nav">{Number(fund.nav ?? 0).toFixed(4)}</div>
+                <div className={`fund-change ${(fund.change ?? '').startsWith('+') ? 'positive' : 'negative'}`}>
+                  {fund.changePercent ?? '0.00%'}
                 </div>
                 <div className="fund-category">{fund.category}</div>
               </div>
@@ -272,7 +213,7 @@ const FundList = () => {
           </button>
         </div>
       </div>
-      <AIAnalysisPanel selectedProduct={selectedFund} productType="fund" />
+      {/* <AIAnalysisPanel selectedProduct={selectedFund} productType="fund" /> */}
     </>
     )
   };

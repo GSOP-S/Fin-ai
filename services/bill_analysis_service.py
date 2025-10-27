@@ -44,6 +44,9 @@ class BillAnalysisService:
         
         # TODO: 接入大模型API，生成更智能的分析
         # ai_insights = self._call_ai_model(summary, category_distribution, bills)
+        ai_insights = self._call_ai_model(summary, category_distribution, bills)
+        if ai_insights:
+            suggestions = ai_insights
         
         return {
             'summary': summary,
@@ -153,37 +156,19 @@ class BillAnalysisService:
     
     def _call_ai_model(self, summary: Dict, categories: List[Dict], bills: List[Dict]) -> str:
         """
-        调用大模型API生成智能分析
-        
-        TODO: 接入OpenAI/Claude等大模型
+        调用大模型API生成智能分析，失败时返回 None
         """
-        # 预留大模型接入点
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
+        try:
+            from services.model_provider import ModelProvider  # 延迟导入避免循环
+            model = ModelProvider()
+            prompt = (
+                "请根据以下账单摘要与分类，给出3条专业的理财建议（每条不超过40字，中文）：\n"
+                f"摘要：收入 {summary.get('totalIncome')} 元，支出 {summary.get('totalExpense')} 元，"\
+                f"节余率 {summary.get('savingRate')}%，交易笔数 {summary.get('transactionCount')}。\n"\
+                f"主要支出类别：{[c.get('category') for c in categories]}"
+            )
+            return model.generate(prompt, context={"type": "bill"})
+        except Exception as exc:
+            print(f"[BillAnalysisService] AI 调用失败: {exc}")
             return None
-        
-        # 示例代码：
-        # from openai import OpenAI
-        # client = OpenAI(api_key=api_key)
-        # 
-        # prompt = f"""
-        # 分析以下用户账单数据：
-        # 总收入：{summary['totalIncome']}元
-        # 总支出：{summary['totalExpense']}元
-        # 主要支出类别：{categories}
-        # 
-        # 请提供3-5条专业的理财建议。
-        # """
-        # 
-        # response = client.chat.completions.create(
-        #     model="gpt-4",
-        #     messages=[
-        #         {"role": "system", "content": "你是专业的理财顾问"},
-        #         {"role": "user", "content": prompt}
-        #     ]
-        # )
-        # 
-        # return response.choices[0].message.content
-        
-        return None
 

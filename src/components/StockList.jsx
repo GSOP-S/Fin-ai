@@ -1,76 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './StockList.css';
+import { fetchStockList } from '../api/stock';
 
-// 模拟股票数据（作为备用）
-const mockStocks = [
-  {
-    id: 1,
-    code: '600519',
-    name: '贵州茅台',
-    price: 1820.00,
-    change: +25.60,
-    changePercent: '+1.43%'
-  },
-  {
-    id: 2,
-    code: '000858',
-    name: '五粮液',
-    price: 162.50,
-    change: -3.20,
-    changePercent: '-1.93%'
-  },
-  {
-    id: 3,
-    code: '000002',
-    name: '万科A',
-    price: 12.50,
-    change: +0.25,
-    changePercent: '+2.05%'
-  },
-  {
-    id: 4,
-    code: '000001',
-    name: '平安银行',
-    price: 10.80,
-    change: -0.12,
-    changePercent: '-1.10%'
-  },
-  {
-    id: 5,
-    code: '601318',
-    name: '中国平安',
-    price: 45.60,
-    change: +0.80,
-    changePercent: '+1.79%'
-  },
-  {
-    id: 6,
-    code: '002594',
-    name: '比亚迪',
-    price: 288.50,
-    change: -5.60,
-    changePercent: '-1.90%'
-  },
-  {
-    id: 7,
-    code: '000333',
-    name: '美的集团',
-    price: 58.20,
-    change: +1.20,
-    changePercent: '+2.10%'
-  },
-  {
-    id: 8,
-    code: '000651',
-    name: '格力电器',
-    price: 36.50,
-    change: -0.45,
-    changePercent: '-1.22%'
-  }
-];
+// 已移除模拟股票数据
 
 const StockList = ({ onSelectStock, onStockHover, onStockLeave }) => {
-  const [stocks, setStocks] = useState(mockStocks);
+  const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -93,50 +28,30 @@ const StockList = ({ onSelectStock, onStockHover, onStockLeave }) => {
   const fetchStocks = async (page = 1, filterOptions = filters) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // 构建查询参数
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pagination.pageSize.toString(),
+      const params = {
+        page,
+        pageSize: pagination.pageSize,
         orderBy: filterOptions.orderBy,
-        orderDir: filterOptions.orderDir
-      });
-      
-      // 添加行业筛选
+        orderDir: filterOptions.orderDir,
+      };
       if (filterOptions.industry) {
-        params.append('industry', filterOptions.industry);
+        params.industry = filterOptions.industry;
       }
-      
-      const response = await fetch(`http://localhost:5000/api/stocks?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('获取股票数据失败');
+
+      const result = await fetchStockList(params);
+
+      // 解析后端统一响应结构 { success, data, message }
+      const payload = result?.data || {};
+
+      if (payload.pagination) {
+        setPagination(payload.pagination);
       }
-      
-      const data = await response.json();
-      if (data.success && data.data && data.data.length > 0) {
-        // 更新分页信息
-        if (data.pagination) {
-          setPagination(data.pagination);
-        }
-        
-        // 将后端数据与本地价格数据合并
-        const enhancedStocks = data.data.map((stock, index) => {
-          const mockData = mockStocks.find(m => m.code === stock.code) || mockStocks[index % mockStocks.length];
-          return {
-            ...stock,
-            id: stock.id || index + 1,
-            price: mockData.price,
-            change: mockData.change,
-            changePercent: mockData.changePercent
-          };
-        });
-        setStocks(enhancedStocks);
-      }
+      setStocks(payload.data || payload.stocks || []);
     } catch (err) {
       console.error('Error fetching stocks:', err);
       setError(err.message);
-      // 出错时使用模拟数据
     } finally {
       setLoading(false);
     }
@@ -165,6 +80,11 @@ const StockList = ({ onSelectStock, onStockHover, onStockLeave }) => {
         {loading && <span className="loading-indicator">加载中...</span>}
         {error && <span className="error-indicator">{error}</span>}
       </div>
+
+      {/* 无数据提示 */}
+      {!loading && stocks.length === 0 && !error && (
+        <p style={{ textAlign: 'center', padding: '20px 0' }}>暂无数据</p>
+      )}
       
       {/* 筛选和排序控件 - 为未来扩展预留 */}
       <div className="stock-filter-controls">
@@ -215,12 +135,12 @@ const StockList = ({ onSelectStock, onStockHover, onStockLeave }) => {
               {stock.industry && <div className="stock-industry">{stock.industry}</div>}
             </div>
             <div className="stock-price-info">
-              <div className="stock-price">{stock.price.toFixed(2)}</div>
+              <div className="stock-price">{Number(stock.price ?? 0).toFixed(2)}</div>
               <div 
-                className={`stock-change ${stock.change >= 0 ? 'positive' : 'negative'}`}
+                className={`stock-change ${(stock.change ?? 0) >= 0 ? 'positive' : 'negative'}`}
               >
-                {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}
-                <span className="change-percent">{stock.changePercent}</span>
+                {(stock.change ?? 0) >= 0 ? '+' : ''}{Number(stock.change ?? 0).toFixed(2)}
+                <span className="change-percent">{stock.changePercent ?? ''}</span>
               </div>
             </div>
           </div>

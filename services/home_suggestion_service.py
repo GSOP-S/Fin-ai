@@ -49,6 +49,9 @@ class HomeSuggestionService:
         
         # TODO: 接入大模型API，生成更智能的首页建议
         # ai_greeting = self._call_ai_model(user_id, bill_stats, transfer_stats)
+        ai_greeting = self._call_ai_model(user_id, bill_stats, transfer_stats)
+        if ai_greeting:
+            suggestions = ai_greeting
         
         return {
             'greeting': f'欢迎回来，{display_name}！',
@@ -135,10 +138,18 @@ class HomeSuggestionService:
     
     def _call_ai_model(self, user_id: str, bill_stats: Dict, transfer_stats: Dict) -> str:
         """
-        调用大模型API生成智能问候
-        
-        TODO: 接入大模型
+        调用大模型API生成智能问候，失败时返回 None
         """
-        # 预留接口
-        return None
+        try:
+            from services.model_provider import ModelProvider
+            model = ModelProvider()
+            prompt = (
+                "请作为个人财务助理，根据以下信息用不超过80字生成个性化首页问候与理财提示（中文）：\n"\
+                f"本月总支出: {bill_stats.get('total_expense', 0)} 元，交易笔数: {bill_stats.get('total_count', 0)}；"\
+                f"本月转账总额: {transfer_stats.get('total_amount', 0)} 元，转账次数: {transfer_stats.get('total_count', 0)}。"
+            )
+            return model.generate(prompt, context={"type": "home"})
+        except Exception as exc:
+            print(f"[HomeSuggestionService] AI 调用失败: {exc}")
+            return None
 

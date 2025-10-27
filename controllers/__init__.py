@@ -7,6 +7,8 @@ from .bill_controller import bill_bp
 from .transfer_controller import transfer_bp
 from .home_controller import home_bp
 from .user_controller import user_bp
+from .stock_controller import stock_bp
+from .fund_controller import fund_bp
 
-__all__ = ['bill_bp', 'transfer_bp', 'home_bp', 'user_bp']
+__all__ = ['bill_bp', 'transfer_bp', 'home_bp', 'user_bp', 'stock_bp', 'fund_bp']
 

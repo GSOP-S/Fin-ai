@@ -113,6 +113,8 @@ const AIContent = ({ page, data, onClose }) => {
 
 const AIAssistant = ({ onAction }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // 新增：记录是否通过点击固定弹窗
+  const [isPinned, setIsPinned] = useState(false);
   const [position, setPosition] = useState({ bottom: '80px', right: '20px' });
   const [suggestions, setSuggestions] = useState({});
   const [loading, setLoading] = useState(false);
@@ -157,7 +159,9 @@ const AIAssistant = ({ onAction }) => {
       const aiContainer = document.querySelector('.ai-assistant-container');
       const aiDialog = document.querySelector('.ai-dialog');
       if (aiContainer && !aiContainer.contains(event.target) && aiDialog && !aiDialog.contains(event.target)) {
-        setIsOpen(false);
+-        setIsOpen(false);
++        setIsOpen(false);
++        setIsPinned(false);
       }
     };
 
@@ -180,7 +184,28 @@ const AIAssistant = ({ onAction }) => {
       {/* AI助手图标 - 机器人 */}
       <div 
         className={`ai-assistant-container ${isOpen ? 'active' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          // 点击图标时，如果当前未固定，则固定；若已固定，则关闭并取消固定
+          if (!isOpen) {
+            setIsOpen(true);
+            setIsPinned(true);
+          } else {
+            setIsOpen(false);
+            setIsPinned(false);
+          }
+        }}
+        // 鼠标悬停时呼出提示气泡
+        onMouseEnter={() => {
+          if (!isOpen) {
+            setIsOpen(true);
+          }
+        }}
+        // 移走时若未固定则关闭
+        onMouseLeave={() => {
+          if (!isPinned) {
+            setIsOpen(false);
+          }
+        }}
       >
         <div className="ai-assistant-icon">
           {/* 机器人SVG图标 */}
@@ -222,7 +247,11 @@ const AIAssistant = ({ onAction }) => {
         >
           <div className="ai-dialog-header">
             <h2>智能金融助手</h2>
-            <button className="close-btn" onClick={() => setIsOpen(false)}>×</button>
+            <button className="ai-dialog-close" onClick={() => {
+-              setIsOpen(false);
++              setIsOpen(false);
++              setIsPinned(false);
+            }}>×</button>
             <div className="dialog-drag-handle"></div>
           </div>
           <div className="ai-dialog-content">

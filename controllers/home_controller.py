@@ -3,7 +3,8 @@
 处理首页相关的HTTP请求
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
+from utils.response import success_response, error_response, handle_exceptions
 from services.home_suggestion_service import HomeSuggestionService
 
 # 创建蓝图
@@ -14,6 +15,7 @@ home_service = HomeSuggestionService()
 
 
 @home_bp.route('/home-suggestion', methods=['POST'])
+@handle_exceptions
 def get_home_suggestion():
     """
     获取首页智能建议API
@@ -36,32 +38,10 @@ def get_home_suggestion():
             "message": "获取首页建议成功"
         }
     """
-    try:
-        # 获取请求数据
-        data = request.json
-        user_id = data.get('userId', '')
-        
-        # 参数验证
-        if not user_id:
-            return jsonify({
-                'success': False,
-                'error': '缺少用户ID',
-                'message': '请求参数错误'
-            }), 400
-        
-        # 调用服务层
-        suggestion_result = home_service.generate_home_suggestion(user_id)
-        
-        return jsonify({
-            'success': True,
-            'data': suggestion_result,
-            'message': '获取首页建议成功'
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message': '获取首页建议失败'
-        }), 500
+    data = request.json or {}
+    user_id = data.get('userId', '')
+    if not user_id:
+        return error_response('缺少用户ID', message='请求参数错误', status_code=400)
+    suggestion_result = home_service.generate_home_suggestion(user_id)
+    return success_response(suggestion_result, message='获取首页建议成功')
 
