@@ -1,0 +1,43 @@
+/* AI内容布局样式 */
+
+.ai-content {
+  padding: 16px;
+}
+
+.ai-content-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.ai-content-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-section {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.ai-section-highlight {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+}
+
+.ai-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.ai-section-content {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+}
+

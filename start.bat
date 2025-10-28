@@ -38,7 +38,7 @@ pause
 
 echo.
 echo 正在启动后端服务...
-start "Fin-AI 后端" cmd /k "python backend.py"
+start "Fin-AI 后端" cmd /k "python app.py"
 
 timeout /t 3 >nul
 
