@@ -79,109 +79,9 @@ function App() {
     return result?.analysis || '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
   };
 
-  // 统一的AI建议展示函数
-  const showAISuggestion = async (pageType, context = {}, options = {}) => {
-    const {
-      autoShow = true,
-      autoHideDelay = 20000,
-      speakEnabled = true,
-      bubbleTitle = '💡 智能建议'
-    } = options;
-    
-    // 调用通用AI建议API
-    const result = await generateAISuggestion(pageType, context);
-    if (!result) return;
-    
-    // 格式化建议文本
-    let suggestionText = '';
-    if (typeof result === 'string') {
-      suggestionText = result;
-    } else if (result.suggestion) {
-      suggestionText = result.suggestion;
-    } else if (result.analysis) {
-      suggestionText = result.analysis;
-    } else {
-      // 处理复杂的建议对象（如账单分析）
-      suggestionText = formatComplexSuggestion(result);
-    }
-    
-    setCurrentSuggestion(suggestionText);
-    setCurrentSuggestionId(`${pageType}-${Date.now()}`);
-    setHasNewSuggestion(true);
-    
-    // 语音播报
-    if (speakEnabled) {
-      speakSuggestion(suggestionText);
-    }
-    
-    // 自动显示气泡
-    if (autoShow) {
-      setTimeout(() => {
-        setShowSuggestionBubble(true);
-        // 自动隐藏
-        if (autoHideDelay > 0) {
-          setTimeout(() => {
-            setShowSuggestionBubble(false);
-            setHasNewSuggestion(false);
-          }, autoHideDelay);
-        }
-      }, 1000);
-    }
-    
-    return result;
-  };
-  
-  // 格式化复杂建议对象为文本
-  const formatComplexSuggestion = (result) => {
-    let text = '';
-    
-    // 处理账单分析
-    if (result.summary) {
-      text += `📊 财务概览\n`;
-      if (result.summary.totalIncome) {
-        text += `总收入：${result.summary.totalIncome.toFixed(2)}元\n`;
-      }
-      if (result.summary.totalExpense) {
-        text += `总支出：${result.summary.totalExpense.toFixed(2)}元\n`;
-      }
-      if (result.summary.savingRate) {
-        text += `储蓄率：${result.summary.savingRate}%\n`;
-      }
-      text += '\n';
-    }
-    
-    // 处理建议列表
-    if (result.suggestions && result.suggestions.length > 0) {
-      text += `💡 优化建议\n`;
-      result.suggestions.forEach((suggestion, index) => {
-        text += `${index + 1}. ${suggestion}\n`;
-      });
-      text += '\n';
-    }
-    
-    // 处理异常提醒
-    if (result.abnormalTransactions && result.abnormalTransactions.length > 0) {
-      text += `⚠️ 异常消费提醒\n`;
-      result.abnormalTransactions.slice(0, 2).forEach(item => {
-        text += `${item.merchant}: ${item.amount.toFixed(2)}元 (${item.reason})\n`;
-      });
-    }
-    
-    // 处理转账建议
-    if (result.recentAccounts) {
-      text += `📋 最近转账账户\n`;
-      result.recentAccounts.slice(0, 3).forEach(acc => {
-        text += `${acc.name} ${acc.accountNumber}\n`;
-      });
-      text += '\n';
-    }
-    
-    if (result.arrivalTime) {
-      text += `⏰ 到账时间：${result.arrivalTime}\n`;
-    }
-    
-    return text.trim() || '暂无详细建议';
-  };
+  // ===== showAISuggestion 函数已迁移到 useAI Hook =====
+  // BillDetail 和 TransferPage 现在直接使用 useAI Hook
+  // 其他页面（股票、基金）仍使用旧的建议系统
   
   // 生成股票建议 - 调用后端API（保留兼容性）
   const generateStockSuggestion = async (stock) => {
@@ -543,7 +443,6 @@ function App() {
         return (
           <BillDetail 
             onNavigate={handleNavigate}
-            onShowAISuggestion={showAISuggestion}
           />
         );
       
@@ -551,7 +450,6 @@ function App() {
         return (
           <TransferPage 
             onNavigate={handleNavigate}
-            onShowAISuggestion={showAISuggestion}
           />
         );
       

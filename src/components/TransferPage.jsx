@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import './TransferPage.css';
+import { useAI } from '../hooks/useAI';
 
-function TransferPage({ onNavigate, onShowAISuggestion }) {
+function TransferPage({ onNavigate }) {
+  // AI功能Hook
+  const ai = useAI();
   // 状态管理
   const [recipientAccount, setRecipientAccount] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -54,12 +57,13 @@ function TransferPage({ onNavigate, onShowAISuggestion }) {
     setIsFirstTimeAccount(isFirstTime);
     
     // 当输入完整账号后，触发AI建议
-    if (value.length >= 10 && onShowAISuggestion) {
+    if (value.length >= 10) {
       const suggestionData = {
         recipientAccount: value,
         accountType: detectedAccountType,
         isFirstTimeAccount: isFirstTime,
         recentAccounts,
+        amount: transferAmount,
         arrivalTime: detectedAccountType === 'same_bank' ? '实时到账' : '预计1-2小时',
         suggestion: isFirstTime ? '该账户近期无交易记录，建议核实收款人信息' : '常用账户，可放心转账'
       };
@@ -68,7 +72,10 @@ function TransferPage({ onNavigate, onShowAISuggestion }) {
       
       // 自动触发AI建议气泡（延迟500ms，让用户看到账户类型变化）
       setTimeout(() => {
-        onShowAISuggestion('transfer', suggestionData, {
+        ai.show('transfer', {
+          transferData: suggestionData,
+          ...suggestionData
+        }, {
           autoShow: true,
           autoHideDelay: 25000,
           speakEnabled: false
@@ -79,18 +86,19 @@ function TransferPage({ onNavigate, onShowAISuggestion }) {
 
   // 手动触发AI转账建议
   const triggerAISuggestion = () => {
-    if (onShowAISuggestion) {
-      const suggestionData = aiSuggestionData || {
-        recentAccounts,
-        suggestion: '选择常用账户可以更快完成转账'
-      };
-      
-      onShowAISuggestion('transfer', suggestionData, {
-        autoShow: true,
-        autoHideDelay: 0, // 手动触发不自动隐藏
-        speakEnabled: false
-      });
-    }
+    const suggestionData = aiSuggestionData || {
+      recentAccounts,
+      suggestion: '选择常用账户可以更快完成转账'
+    };
+    
+    ai.show('transfer', {
+      transferData: suggestionData,
+      ...suggestionData
+    }, {
+      autoShow: true,
+      autoHideDelay: 0, // 手动触发不自动隐藏
+      speakEnabled: false
+    });
   };
 
   // 处理转账提交

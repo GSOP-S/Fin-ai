@@ -444,6 +444,7 @@ class AIService:
 ai_service = AIService()
 
 # 导出函数接口，便于其他模块调用
+# TODO: 这些包装函数是冗余的，建议Controller直接使用 ai_service.方法名()
 def generate_ai_response(prompt, context=None):
     return ai_service.generate_ai_response(prompt, context)
 

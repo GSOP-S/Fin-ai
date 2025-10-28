@@ -21,8 +21,8 @@ ai_bp = Blueprint('ai', __name__)
 ai_service = AIService()
 
 # 兼容旧路径：AI助手对话接口
+# 注意：/api/ai/interact 路由已移至 ai_interaction.py，提供更完善的功能
 @ai_bp.route('/api/ai-assistant', methods=['POST'])
-@ai_bp.route('/api/ai/interact', methods=['POST'])  # 新路径，供前端统一使用
 @handle_exceptions
 def ai_assistant_api():
     data = request.json or {}

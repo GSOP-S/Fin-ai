@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './BillDetail.css';
+import { useAI } from '../hooks/useAI';
 
-const BillDetail = ({ onNavigate, onShowAISuggestion }) => {
+const BillDetail = ({ onNavigate }) => {
+  // AI功能Hook
+  const ai = useAI();
   // 状态管理
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,14 +81,15 @@ const BillDetail = ({ onNavigate, onShowAISuggestion }) => {
     }, 800);
   }, [selectedMonth]);
   
-  // 数据加载完成后，自动触发AI建议气泡
+  // 数据加载完成后，自动触发AI建议
   useEffect(() => {
-    if (!loading && aiAnalysisData && !aiSuggestionTriggered && onShowAISuggestion) {
+    if (!loading && aiAnalysisData && !aiSuggestionTriggered) {
       // 延迟触发，让用户先看到账单列表
       setTimeout(() => {
-        onShowAISuggestion('bill', { 
+        ai.show('bill', { 
           bills,
-          analysis: aiAnalysisData 
+          analysis: aiAnalysisData,
+          billData: aiAnalysisData  // 后端需要的格式
         }, {
           autoShow: true,
           autoHideDelay: 30000, // 账单分析显示30秒
@@ -94,7 +98,7 @@ const BillDetail = ({ onNavigate, onShowAISuggestion }) => {
         setAiSuggestionTriggered(true);
       }, 1500);
     }
-  }, [loading, aiAnalysisData, aiSuggestionTriggered, bills, onShowAISuggestion]);
+  }, [loading, aiAnalysisData, aiSuggestionTriggered, bills, ai]);
 
   // 生成AI消费分析
   const generateAiAnalysis = (transactions) => {
@@ -206,16 +210,15 @@ const BillDetail = ({ onNavigate, onShowAISuggestion }) => {
           <button 
             className="ai-analysis-btn"
             onClick={() => {
-              if (onShowAISuggestion) {
-                onShowAISuggestion('bill', { 
-                  bills,
-                  analysis: aiAnalysisData 
-                }, {
-                  autoShow: true,
-                  autoHideDelay: 0, // 手动触发时不自动隐藏
-                  speakEnabled: false
-                });
-              }
+              ai.show('bill', { 
+                bills,
+                analysis: aiAnalysisData,
+                billData: aiAnalysisData
+              }, {
+                autoShow: true,
+                autoHideDelay: 0, // 手动触发时不自动隐藏
+                speakEnabled: false
+              });
             }}
           >
             <span className="ai-icon">🤖</span>
