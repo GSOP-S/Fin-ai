@@ -103,29 +103,12 @@ function App() {
     };
     setUserActions(prev => [...prev, action]);
     
-    // 生成并显示建议
-    const suggestion = await generateStockSuggestion(stock);
-    setCurrentSuggestion(suggestion);
-    setHasNewSuggestion(true);
-    setCurrentSuggestionId(`stock-${stock.code}-${Date.now()}`);
-    
-    // 语音读出建议
-    speakSuggestion(suggestion);
-    
-    // 清除之前的定时器
-    if (suggestionTimeoutRef.current) {
-      clearTimeout(suggestionTimeoutRef.current);
-    }
-    
-    // 3秒后自动显示气泡建议
-    suggestionTimeoutRef.current = setTimeout(() => {
-      setShowSuggestionBubble(true);
-      // 10秒后自动隐藏气泡
-      setTimeout(() => {
-        setShowSuggestionBubble(false);
-        setHasNewSuggestion(false);
-      }, 10000);
-    }, 1000);
+    // 使用统一的AI气泡显示
+    ai.show('stock', { stock }, {
+      autoShow: true,
+      autoHideDelay: 10000, // 10秒后自动隐藏
+      speakEnabled: true
+    });
     
     // 调用AI助手接口进行更深入分析（保留大模型接入部分）
     callAIAssistant(`分析股票 ${stock.name} (${stock.code})`, { stockData: stock });
@@ -184,45 +167,14 @@ function App() {
 
   // 处理选择基金
   const handleSelectFund = async (fund) => {
-    try {
-      setSelectedFund(fund);
-      
-      // 调用后端API生成基金建议
-      const result = await request('/api/fund-suggestion', {
-        method: 'POST',
-        body: JSON.stringify({ fund }),
-      });
-      let suggestion;
-      if (result.success) {
-        suggestion = result.data.suggestion;
-      } else {
-        console.error('获取基金建议失败:', result.error);
-        suggestion = `基金建议：${fund.name} 可作为您投资组合的一个选择。`;
-      }
-      
-      setCurrentSuggestion(suggestion);
-      setShowSuggestionBubble(true);
-      setHasNewSuggestion(false);
-      setCurrentSuggestionId(`fund-${fund.code}-${Date.now()}`);
-      
-      // 20秒后自动隐藏气泡
-      setTimeout(() => {
-        setShowSuggestionBubble(false);
-      }, 20000);
-    } catch (error) {
-      console.error('基金建议API调用失败:', error);
-      // 备用建议
-      const suggestion = `基金建议：${fund.name} 可作为您投资组合的一个选择。`;
-      setCurrentSuggestion(suggestion);
-      setShowSuggestionBubble(true);
-      setHasNewSuggestion(false);
-      setCurrentSuggestionId(`fund-${fund.code}-${Date.now()}`);
-      
-      // 20秒后自动隐藏气泡
-      setTimeout(() => {
-        setShowSuggestionBubble(false);
-      }, 20000);
-    }
+    setSelectedFund(fund);
+    
+    // 使用统一的AI气泡显示
+    ai.show('fund', { fund }, {
+      autoShow: true,
+      autoHideDelay: 20000, // 20秒后自动隐藏
+      speakEnabled: false
+    });
   };
   
   // 处理鼠标悬停在股票上
