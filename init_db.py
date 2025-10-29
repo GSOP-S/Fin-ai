@@ -6,10 +6,10 @@ import os
 load_dotenv()
 
 # 数据库连接信息
-DB_HOST = os.getenv('MYSQL_HOST')
-DB_USER = os.getenv('MYSQL_USER')
-DB_PASSWORD = os.getenv('MYSQL_PASSWORD')
-DB_PORT = int(os.getenv('MYSQL_PORT', 3306))
+DB_HOST = os.getenv('DB_HOST')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_PORT = int(os.getenv('DB_PORT', 3306))
 
 # 连接到MySQL服务器
 conn = pymysql.connect(

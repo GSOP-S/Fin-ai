@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { getPageSuggestion } from '../api/ai';
+import { generateAISuggestion } from '../api/ai';
 import { formatAISuggestion } from '../utils/aiFormatter';
 import { getAIConfig, AI_SPEECH_CONFIG } from '../config/ai.config';
 
@@ -47,20 +47,34 @@ export function useAI(options = {}) {
     
     try {
       // 获取配置
-      const config = getAIConfig(pageType, { ...options, ...configOverrides });
-      
-      // 调用API
-      const result = await getPageSuggestion(pageType, context);
-      
-      if (!result || !result.success) {
-        throw new Error(result?.error || 'AI建议获取失败');
+      // 获取配置并处理可能的配置错误
+      let config;
+      try {
+        config = getAIConfig(pageType, { ...options, ...configOverrides });
+      } catch (configError) {
+        console.error('AI配置获取失败:', configError);
+        // 使用默认配置继续
+        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
       }
       
+      // 调用API
+      const result = await generateAISuggestion(pageType, context);
+      
+      // 即使AI调用失败，generateAISuggestion已返回备用建议
+      
       // 格式化建议文本
-      const text = formatAISuggestion(result.data, pageType);
+      // 为格式化步骤添加错误处理，确保备用建议能正常显示
+      let text;
+      try {
+        text = formatAISuggestion(result, pageType);
+      } catch (formatError) {
+        console.error('AI建议格式化失败:', formatError);
+        // 直接使用备用建议中的文本内容
+        text = result.suggestion || result.analysis || '暂无建议';
+      }
       
       // 更新状态
-      setSuggestion(result.data);
+      setSuggestion(result);
       setSuggestionText(text);
       
       // 自动显示
@@ -76,8 +90,13 @@ export function useAI(options = {}) {
       }
       
       // 语音播报
+      // 语音播报添加错误处理
       if (config.speakEnabled && text) {
-        speak(text);
+        try {
+          speak(text);
+        } catch (speechError) {
+          console.error('语音播报调用失败:', speechError);
+        }
       }
       
       return result.data;
@@ -86,7 +105,9 @@ export function useAI(options = {}) {
       setError(err.message);
       
       // 显示错误提示
-      setSuggestionText('抱歉，AI助手暂时不可用，请稍后再试。');
+      // 显示具体错误信息以便诊断
+      // 显示完整错误信息以便诊断
+      setSuggestionText(`抱歉，AI助手暂时不可用: ${JSON.stringify(err)}`);
       setIsVisible(true);
       
       return null;

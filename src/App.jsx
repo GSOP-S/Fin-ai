@@ -7,10 +7,12 @@ import FundList from './components/FundList';
 import HomePage from './components/HomePage';
 import TransferPage from './components/TransferPage';
 import BillDetail from './components/BillDetail';
-import { getPageSuggestion, generateAIResponse } from './api/ai';
+import { generateAIResponse, generateAISuggestion } from './api/ai';
 import { submitFeedback } from './api/feedback';
 import request from './api/request';
-import { useAI } from './hooks/useAI';
+import { useAI} from './hooks/useAI';
+  // 生成市场分析和股票推荐 - 调用后端API
+import { generateMarketAnalysis } from './api/stock';
 
 function App() {
   // 统一的AI气泡管理 - 所有页面共用
@@ -36,50 +38,6 @@ function App() {
   const currentUtteranceRef = useRef(null);
 
   // ===== 统一的AI建议管理系统 =====
-  
-  // 通用AI建议生成函数 - 根据页面类型和上下文调用不同的后端接口
-  const generateAISuggestion = async (pageType, context = {}) => {
-    try {
-      const result = await getPageSuggestion(pageType, context);
-      if (result.success) {
-        return result.data;
-      } else {
-        console.error(`获取${pageType}建议失败:`, result.error);
-        return getFallbackSuggestion(pageType, context);
-      }
-    } catch (error) {
-      console.error(`AI建议API调用失败(${pageType}):`, error);
-      return getFallbackSuggestion(pageType, context);
-    }
-  };
-  
-  // 备用建议生成（离线模式）
-  const getFallbackSuggestion = (pageType, context) => {
-    const fallbacks = {
-      'home': { 
-        suggestion: `欢迎回来！${user?.displayName || ''}。\n\n💡 今日建议：\n• 查看账单分析，了解本月消费情况\n• 关注理财产品，把握投资机会\n• 定期存款利率优惠中`
-      },
-      'market': { analysis: '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。' },
-      'bill': { 
-        summary: '本月总支出较上月有所增加，建议控制非必要支出。',
-        suggestions: ['餐饮支出占较高，建议适当减少外出就餐', '储蓄率偏低，建议增加储蓄比例']
-      },
-      'transfer': {
-        recentAccounts: context.recentAccounts || [],
-        arrivalTime: '预计2小时内到账',
-        suggestion: context.suggestion || '建议核实收款人信息后再转账'
-      },
-      'stock': { suggestion: `${context.stock?.name || '该股票'} 建议谨慎操作，注意风险控制。` },
-      'fund': { suggestion: `${context.fund?.name || '该基金'} 建议长期持有，注意市场波动。` }
-    };
-    return fallbacks[pageType] || { suggestion: '暂无建议' };
-  };
-  
-  // 生成市场分析和股票推荐 - 调用后端API
-  const generateMarketAnalysis = async () => {
-    const result = await generateAISuggestion('market');
-    return result?.analysis || '市场分析：今日市场整体平稳。建议关注新能源、半导体等热门板块。';
-  };
 
   // ===== showAISuggestion 函数已迁移到 useAI Hook =====
   // BillDetail 和 TransferPage 现在直接使用 useAI Hook
@@ -111,7 +69,7 @@ function App() {
     });
     
     // 调用AI助手接口进行更深入分析（保留大模型接入部分）
-    callAIAssistant(`分析股票 ${stock.name} (${stock.code})`, { stockData: stock });
+    generateAIResponse(`分析股票 ${stock.name} (${stock.code})`, { stockData: stock });
   };
 
   // 处理买入/卖出操作

@@ -47,7 +47,10 @@ function formatBillSuggestion(result) {
   let text = '';
   
   // 财务概览
-  if (result.summary) {
+  // 处理字符串类型的summary（备用建议）和对象类型（AI返回结果）
+  if (typeof result.summary === 'string') {
+    text += `📊 财务概览\n${result.summary}\n`;
+  } else if (result.summary) {
     text += '📊 财务概览\n';
     if (result.summary.totalIncome) {
       text += `总收入：¥${result.summary.totalIncome.toFixed(2)}\n`;
