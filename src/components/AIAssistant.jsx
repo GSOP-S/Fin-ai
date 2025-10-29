@@ -4,7 +4,7 @@ import './AIAssistant.css';
 const AIAssistant = () => {
   return (
     <div className="ai-assistant-root">
-      {/* AI助手图标 - 机器人（装饰用，无交互） */}
+      {/* AI助手图标 - 仅装饰，无任何交互或气泡渲染 */}
       <div className="ai-assistant-container ai-assistant-decorative">
         <div className="ai-assistant-icon">
           {/* 机器人SVG图标 */}
@@ -34,9 +34,7 @@ const AIAssistant = () => {
           </svg>
         </div>
         <span className="ai-assistant-label">AI助手</span>
-        
       </div>
-
     </div>
   );
 };
