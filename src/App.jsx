@@ -251,6 +251,7 @@ function App() {
   };
   
   // 发送消息到AI聊天
+  //TODO: 使用API调用，而不是直接调用callAIAssistant
   const sendToAIAssistant = async () => {
     if (!userInput.trim()) return;
     
