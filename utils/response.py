@@ -3,10 +3,18 @@
 方便在各个 Controller 中统一返回格式并集中处理异常。
 """
 
+import logging
 from functools import wraps
 from typing import Any, Callable, Dict, Tuple
 
 from flask import jsonify
+
+# 配置日志记录
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 JsonResponse = Tuple[Any, int]
 
@@ -49,6 +57,8 @@ def handle_exceptions(func: Callable) -> Callable:
         try:
             return func(*args, **kwargs)
         except Exception as exc:
+            # 记录详细的错误日志
+            logger.error(f"Error in {func.__name__}: {str(exc)}", exc_info=True)
             # 这里可以根据异常类型做更细粒度的处理，例如数据库错误、验证错误等
             return error_response(str(exc), message="Internal Server Error", status_code=500)
 

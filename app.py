@@ -31,7 +31,6 @@ from controllers.transfer_controller import transfer_bp
 from controllers.home_controller import home_bp
 from controllers.user_controller import user_bp
 from controllers.ai_controller import ai_bp
-from controllers.ai_interaction import ai_interaction_bp
 from controllers.stock_controller import stock_bp
 from controllers.fund_controller import fund_bp
 
@@ -40,7 +39,6 @@ app.register_blueprint(transfer_bp)
 app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(ai_bp)
-app.register_blueprint(ai_interaction_bp)
 app.register_blueprint(stock_bp)
 app.register_blueprint(fund_bp)
 

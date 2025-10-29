@@ -1,144 +1,366 @@
-.ai-assistant-container {
+/* AIAssistant.css - 智能助手组件样式 */
+
+/* 根容器 */
+.ai-assistant-root {
   position: fixed;
-  bottom: 30px;
+  bottom: 80px;
   right: 20px;
+  z-index: 1000;
+  user-select: none;
+}
+
+/* AI助手图标容器 */
+.ai-assistant-container {
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  cursor: pointer;
-  z-index: 999;
-  transition: transform 0.3s ease;
 }
 
 .ai-assistant-container:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
-.ai-assistant-container.has-suggestion .ai-assistant-icon {
-  animation: pulse-intense 1.5s infinite;
+.ai-assistant-container:active {
+  transform: scale(0.95);
 }
 
-.ai-assistant-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #40a9ff, #1890ff);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.ai-assistant-label {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #666;
-  font-weight: 500;
-}
-
-/* 通知提示点 */
+/* 新建议通知点 */
 .notification-dot {
   position: absolute;
   top: 0;
   right: 0;
-  width: 12px;
-  height: 12px;
-  background-color: #ff4d4f;
+  width: 10px;
+  height: 10px;
+  background-color: #ff4757;
   border-radius: 50%;
   border: 2px solid white;
-  animation: bounce 2s infinite;
+  animation: pulse 2s infinite;
 }
 
-/* 侧边气泡建议 */
-.ai-suggestion-bubble {
-  position: fixed;
-  bottom: 120px;
-  right: 90px;
-  background-color: white;
-  border-radius: 18px;
-  padding: 12px 16px;
-  max-width: 280px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  z-index: 998;
-  animation: slideIn 0.3s ease;
-}
-
-.ai-suggestion-bubble::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -8px;
-  transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8px solid white;
-  border-top: 8px solid transparent;
-  border-bottom: 8px solid transparent;
-}
-
-.ai-suggestion-content {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #333;
-}
-
-.ai-suggestion-content strong {
-  color: #1890ff;
-}
-
-/* 动画效果 */
 @keyframes pulse {
   0% {
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7);
   }
-  50% {
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.6);
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 71, 87, 0);
   }
   100% {
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
   }
 }
 
-@keyframes pulse-intense {
-  0% {
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5), 0 0 0 0 rgba(24, 144, 255, 0.7);
-  }
-  70% {
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5), 0 0 0 10px rgba(24, 144, 255, 0);
-  }
-  100% {
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5), 0 0 0 0 rgba(24, 144, 255, 0);
-  }
+/* AI助手图标 */
+.ai-assistant-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 图标SVG样式 */
+.ai-assistant-icon svg {
+  width: 36px;
+  height: 36px;
+  transition: transform 0.3s ease;
+}
+
+.ai-assistant-container:hover .ai-assistant-icon svg {
+  transform: rotate(5deg) scale(1.05);
+}
+
+/* 通知提醒动画 */
+.ai-assistant-container.has-suggestion {
+  animation: bounce 1s ease-in-out;
 }
 
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
+  0%, 100% {
     transform: translateY(0);
   }
-  40% {
-    transform: translateY(-5px);
-  }
-  60% {
-    transform: translateY(-3px);
+  50% {
+    transform: translateY(-10px);
   }
 }
 
-@keyframes slideIn {
+/* AI建议气泡样式 */
+.ai-suggestion-bubble {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 280px;
+  max-height: 300px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  z-index: 1001;
+  animation: slideUp 0.3s ease-out;
+  overflow-y: auto;
+}
+
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
-/* 适配移动设备 */
-@media (max-width: 500px) {
+/* 气泡三角形指示器 */
+.ai-suggestion-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 24px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+}
+
+/* 气泡头部 */
+.ai-suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ai-bubble-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.ai-bubble-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.ai-bubble-close:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* 气泡内容 */
+.ai-suggestion-content {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.ai-suggestion-content br {
+  margin-bottom: 4px;
+}
+
+/* 气泡操作按钮 */
+.ai-bubble-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.bubble-action-btn {
+  background-color: #f0f4ff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #667eea;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.bubble-action-btn:hover {
+  background-color: #e0e8ff;
+}
+
+/* AI对话框样式 */
+.ai-dialog {
+  position: absolute;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 320px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s ease-out;
+  z-index: 1002;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 对话框头部 */
+.ai-dialog-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-dialog-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ai-dialog-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: white;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.ai-dialog-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 对话框内容区域 */
+.ai-dialog-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* AI内容区域 */
+.ai-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-content h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.ai-content .ai-section {
+  background-color: #f8f9ff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* 建议文本样式 */
+.ai-suggestion-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+  white-space: pre-line;
+}
+
+.ai-suggestion-text br {
+  margin-bottom: 6px;
+}
+
+/* 对话框底部 */
+.ai-dialog-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  border-radius: 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.secondary-btn {
+  background: #f0f4ff;
+  color: #667eea;
+  border: none;
+}
+
+.secondary-btn:hover {
+  background: #e0e8ff;
+}
+
+/* 不同页面的特定样式 */
+.transfer-ai h3 {
+  color: #667eea;
+}
+
+.financing-ai h3 {
+  color: #764ba2;
+}
+
+.bill-ai h3 {
+  color: #f093fb;
+}
+
+/* 移动设备适配 */
+@media (max-width: 768px) {
+  /* 调整AI助手图标大小和位置 */
+  .ai-assistant-root {
+  bottom: 16px;
+  right: 16px;
+}
+  
   .ai-assistant-icon {
     width: 50px;
     height: 50px;
@@ -149,9 +371,114 @@
     height: 32px;
   }
   
+  /* 调整气泡弹窗大小 */
   .ai-suggestion-bubble {
-    max-width: 220px;
-    right: 80px;
+  width: 260px;
+  max-width: calc(100vw - 48px);
+  max-height: 250px;
+  bottom: 72px;
+  padding: 14px;
+}
+  
+  .ai-suggestion-content {
+    font-size: 12px;
+  }
+  
+  /* 调整对话框大小 */
+  .ai-dialog {
+  width: 90vw;
+  max-width: 320px;
+  max-height: 85vh;
+  bottom: 70px;
+  right: 0;
+}
+  
+  /* 调整按钮大小 */
+  .action-btn {
+    padding: 8px 16px;
     font-size: 13px;
   }
+  
+  .bubble-action-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}
+
+/* 平板设备适配 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ai-assistant-icon {
+    width: 54px;
+    height: 54px;
+  }
+  
+  .ai-dialog {
+    width: 300px;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .ai-suggestion-bubble,
+  .ai-dialog {
+    background-color: #1e1e1e;
+    color: #f5f5f5;
+  }
+  
+  .ai-suggestion-bubble::after {
+    border-top-color: #1e1e1e;
+  }
+  
+  .ai-bubble-title,
+  .ai-content h3,
+  .ai-suggestion-text {
+    color: #f5f5f5;
+  }
+  
+  .ai-suggestion-text {
+    color: #ccc;
+  }
+  
+  .ai-content .ai-section {
+    background-color: #2a2a2a;
+  }
+  
+  .ai-dialog-footer {
+    border-top-color: #333;
+  }
+  
+  .secondary-btn {
+    background: #2a2a2a;
+    color: #667eea;
+  }
+  
+  .bubble-action-btn {
+    background-color: #2a2a2a;
+    color: #667eea;
+  }
+  
+  .bubble-action-btn:hover {
+    background-color: #333;
+  }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 聚焦状态样式 */
+button:focus,
+.ai-assistant-container:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+.ai-assistant-container:focus {
+  outline-offset: 3px;
 }
