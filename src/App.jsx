@@ -10,13 +10,15 @@ import BillDetail from './components/BillDetail';
 import { getPageSuggestion, generateAIResponse } from './api/ai';
 import { submitFeedback } from './api/feedback';
 import request from './api/request';
+import { useAI } from './hooks/useAI';
 
 function App() {
+  // 统一的AI气泡管理 - 所有页面共用
+  const ai = useAI();
+  
   const [selectedStock, setSelectedStock] = useState(null);
   const [selectedFund, setSelectedFund] = useState(null);
   const [userActions, setUserActions] = useState([]);
-  const [showSuggestionBubble, setShowSuggestionBubble] = useState(false);
-  const [currentSuggestion, setCurrentSuggestion] = useState('');
   const [hasNewSuggestion, setHasNewSuggestion] = useState(false);
   const [hoveredStock, setHoveredStock] = useState(null);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -443,6 +445,7 @@ function App() {
         return (
           <BillDetail 
             onNavigate={handleNavigate}
+            onShowAI={ai.show}
           />
         );
       
@@ -450,6 +453,7 @@ function App() {
         return (
           <TransferPage 
             onNavigate={handleNavigate}
+            onShowAI={ai.show}
           />
         );
       
@@ -720,8 +724,8 @@ function App() {
         hasNewSuggestion={hasNewSuggestion}
       />
   
-      {/* AI侧边气泡建议 - 只在对话框关闭时显示 */}
-      {showSuggestionBubble && currentSuggestion && !showAIChat && (
+      {/* AI侧边气泡建议 - 统一使用useAI Hook管理 */}
+      {ai.isVisible && ai.suggestionText && !showAIChat && (
         <div className={`ai-suggestion-bubble ${marketAnalysisShown ? 'market-analysis' : ''}`}>
           <div className="ai-suggestion-header">
             <span className="ai-suggestion-title">
@@ -731,11 +735,7 @@ function App() {
               className="close-bubble-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                // 停止语音播放
-                if ('speechSynthesis' in window && speechSynthesis.speaking) {
-                  speechSynthesis.cancel();
-                }
-                setShowSuggestionBubble(false);
+                ai.hide();
                 setMarketAnalysisShown(false);
               }}
               style={{ zIndex: 1002 }}
@@ -744,7 +744,7 @@ function App() {
             </button>
           </div>
           <div className="ai-suggestion-content">
-            {currentSuggestion.split('\n').map((line, index) => (
+            {ai.suggestionText.split('\n').map((line, index) => (
               <p key={index} className="suggestion-line">{line}</p>
             ))}
             <div className="bubble-actions">
@@ -777,18 +777,16 @@ function App() {
                   // 将气泡内容添加到聊天记录
                   const aiMessage = {
                     type: 'ai',
-                    content: currentSuggestion,
+                    content: ai.suggestionText,
                     timestamp: new Date().toISOString()
                   };
                   setChatMessages(prev => [...prev, aiMessage]);
                   
                   // 停止语音播放
-                  if ('speechSynthesis' in window && speechSynthesis.speaking) {
-                    speechSynthesis.cancel();
-                  }
+                  ai.stopSpeaking();
                   
                   // 隐藏气泡并打开对话框
-                  setShowSuggestionBubble(false);
+                  ai.hide();
                   setMarketAnalysisShown(false);
                   setShowAIChat(true);
                   
@@ -807,7 +805,7 @@ function App() {
                 className="speak-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  speakSuggestion(currentSuggestion);
+                  ai.speak(ai.suggestionText);
                 }}
                 title="语音播报"
               >

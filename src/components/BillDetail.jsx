@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './BillDetail.css';
-import { useAI } from '../hooks/useAI';
 
-const BillDetail = ({ onNavigate }) => {
-  // AI功能Hook
-  const ai = useAI();
+const BillDetail = ({ onNavigate, onShowAI }) => {
   // 状态管理
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,10 +80,10 @@ const BillDetail = ({ onNavigate }) => {
   
   // 数据加载完成后，自动触发AI建议
   useEffect(() => {
-    if (!loading && aiAnalysisData && !aiSuggestionTriggered) {
+    if (!loading && aiAnalysisData && !aiSuggestionTriggered && onShowAI) {
       // 延迟触发，让用户先看到账单列表
       setTimeout(() => {
-        ai.show('bill', { 
+        onShowAI('bill', { 
           bills,
           analysis: aiAnalysisData,
           billData: aiAnalysisData  // 后端需要的格式
@@ -98,7 +95,7 @@ const BillDetail = ({ onNavigate }) => {
         setAiSuggestionTriggered(true);
       }, 1500);
     }
-  }, [loading, aiAnalysisData, aiSuggestionTriggered, bills, ai]);
+  }, [loading, aiAnalysisData, aiSuggestionTriggered, bills, onShowAI]);
 
   // 生成AI消费分析
   const generateAiAnalysis = (transactions) => {
@@ -210,15 +207,17 @@ const BillDetail = ({ onNavigate }) => {
           <button 
             className="ai-analysis-btn"
             onClick={() => {
-              ai.show('bill', { 
-                bills,
-                analysis: aiAnalysisData,
-                billData: aiAnalysisData
-              }, {
-                autoShow: true,
-                autoHideDelay: 0, // 手动触发时不自动隐藏
-                speakEnabled: false
-              });
+              if (onShowAI) {
+                onShowAI('bill', { 
+                  bills,
+                  analysis: aiAnalysisData,
+                  billData: aiAnalysisData
+                }, {
+                  autoShow: true,
+                  autoHideDelay: 0, // 手动触发时不自动隐藏
+                  speakEnabled: false
+                });
+              }
             }}
           >
             <span className="ai-icon">🤖</span>

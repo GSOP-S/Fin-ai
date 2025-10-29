@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import './TransferPage.css';
-import { useAI } from '../hooks/useAI';
 
-function TransferPage({ onNavigate }) {
-  // AI功能Hook
-  const ai = useAI();
+function TransferPage({ onNavigate, onShowAI }) {
   // 状态管理
   const [recipientAccount, setRecipientAccount] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -57,7 +54,7 @@ function TransferPage({ onNavigate }) {
     setIsFirstTimeAccount(isFirstTime);
     
     // 当输入完整账号后，触发AI建议
-    if (value.length >= 10) {
+    if (value.length >= 10 && onShowAI) {
       const suggestionData = {
         recipientAccount: value,
         accountType: detectedAccountType,
@@ -72,7 +69,7 @@ function TransferPage({ onNavigate }) {
       
       // 自动触发AI建议气泡（延迟500ms，让用户看到账户类型变化）
       setTimeout(() => {
-        ai.show('transfer', {
+        onShowAI('transfer', {
           transferData: suggestionData,
           ...suggestionData
         }, {
@@ -86,12 +83,14 @@ function TransferPage({ onNavigate }) {
 
   // 手动触发AI转账建议
   const triggerAISuggestion = () => {
+    if (!onShowAI) return;
+    
     const suggestionData = aiSuggestionData || {
       recentAccounts,
       suggestion: '选择常用账户可以更快完成转账'
     };
     
-    ai.show('transfer', {
+    onShowAI('transfer', {
       transferData: suggestionData,
       ...suggestionData
     }, {
