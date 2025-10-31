@@ -94,8 +94,8 @@ def internal_error(error):
         'message': str(error)
     }), 500
 
-# Vercel 需要这个变量名
-handler = app
+# Vercel 会自动使用 Flask app
+# 不需要额外的 handler，Vercel 会自动检测 'app' 变量
 
 # 本地测试支持
 if __name__ == '__main__':
