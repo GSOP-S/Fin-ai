@@ -22,9 +22,16 @@ conn = pymysql.connect(
 
 try:
     with conn.cursor() as cursor:
-        # 创建数据库
-        cursor.execute('CREATE DATABASE IF NOT EXISTS Fin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
-        cursor.execute('USE Fin')
+        # 获取数据库名称（支持 Railway 和本地）
+        db_name = os.getenv('MYSQL_DATABASE', 'Fin')
+        
+        # 如果是本地环境且数据库不存在，则创建
+        if db_name == 'Fin':
+            cursor.execute('CREATE DATABASE IF NOT EXISTS Fin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
+        
+        # 使用指定的数据库
+        cursor.execute(f'USE {db_name}')
+        print(f'✓ 使用数据库: {db_name}')
 
         # 创建Users表
         cursor.execute('''
