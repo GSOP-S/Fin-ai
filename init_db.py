@@ -31,7 +31,7 @@ try:
         
         # 使用指定的数据库
         cursor.execute(f'USE {db_name}')
-        print(f'✓ 使用数据库: {db_name}')
+        print(f'[OK] Using database: {db_name}')
 
         # 创建Users表
         cursor.execute('''
@@ -40,8 +40,9 @@ try:
             password VARCHAR(50) NOT NULL,
             display_name VARCHAR(100) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
+        print('[OK] Users table created')
 
         # 创建Stocks表
         cursor.execute('''
@@ -55,8 +56,9 @@ try:
             recent_performance VARCHAR(100) NOT NULL,
             volatility VARCHAR(20) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
+        print('[OK] Stocks table created')
 
         # 创建Fundings表
         cursor.execute('''
@@ -71,8 +73,9 @@ try:
             risk VARCHAR(20) NOT NULL,
             manager VARCHAR(50) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
+        print('[OK] Fundings table created')
 
         # 创建AI建议表
         cursor.execute('''
@@ -83,8 +86,9 @@ try:
             content JSON NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY page_type_suggestion_type (page_type, suggestion_type)
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
+        print('[OK] AISuggestions table created')
 
         # 创建用户AI交互记录表
         cursor.execute('''
@@ -95,13 +99,14 @@ try:
             action_type VARCHAR(50) NOT NULL,
             suggestion_id INT,
             action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES Users(user_id),
-            FOREIGN KEY (suggestion_id) REFERENCES AISuggestions(id)
-        )
+            INDEX idx_user_id (user_id),
+            INDEX idx_suggestion_id (suggestion_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
+        print('[OK] UserAIActions table created')
         
         # 创建Bills表（账单表）
-        print('创建Bills表...')
+        print('[INFO] Creating Bills table...')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS Bills (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -114,14 +119,13 @@ try:
             status VARCHAR(20) DEFAULT 'completed',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_user_date (user_id, transaction_date),
-            INDEX idx_category (category),
-            FOREIGN KEY (user_id) REFERENCES Users(user_id)
+            INDEX idx_category (category)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
-        print('✓ Bills表创建成功')
+        print('[OK] Bills table created')
         
         # 创建TransferHistory表（转账历史表）
-        print('创建TransferHistory表...')
+        print('[INFO] Creating TransferHistory table...')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS TransferHistory (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -134,11 +138,10 @@ try:
             status VARCHAR(20) DEFAULT 'completed',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_user_recipient (user_id, recipient_account),
-            INDEX idx_transfer_date (transfer_date),
-            FOREIGN KEY (user_id) REFERENCES Users(user_id)
+            INDEX idx_transfer_date (transfer_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
-        print('✓ TransferHistory表创建成功')
+        print('[OK] TransferHistory table created')
 
         # 插入初始用户数据
         cursor.execute('''
@@ -176,7 +179,7 @@ try:
         ''', fund_data)
 
         # 插入示例账单数据
-        print('插入示例账单数据...')
+        print('[INFO] Inserting sample bills...')
         sample_bills = [
             ('UTSZ', '星巴克咖啡', '餐饮', -45.00, '2023-10-28', '09:25:00'),
             ('UTSZ', '沃尔玛超市', '购物', -189.50, '2023-10-27', '18:42:00'),
@@ -194,10 +197,10 @@ try:
         (user_id, merchant, category, amount, transaction_date, transaction_time)
         VALUES (%s, %s, %s, %s, %s, %s)
         ''', sample_bills)
-        print('✓ 示例账单数据插入完成')
+        print('[OK] Sample bills inserted')
         
         # 插入示例转账历史数据
-        print('插入示例转账历史数据...')
+        print('[INFO] Inserting sample transfers...')
         sample_transfers = [
             ('UTSZ', '6222123456781234', '张三', 1000.00, '2023-10-15', '14:20:00'),
             ('UTSZ', '6222123456785678', '李四', 500.00, '2023-10-10', '10:35:00'),
@@ -210,10 +213,10 @@ try:
         (user_id, recipient_account, recipient_name, amount, transfer_date, transfer_time)
         VALUES (%s, %s, %s, %s, %s, %s)
         ''', sample_transfers)
-        print('✓ 示例转账历史数据插入完成')
+        print('[OK] Sample transfers inserted')
         
         # 插入初始AI建议数据
-        print('插入AI建议数据...')
+        print('[INFO] Inserting AI suggestions...')
         ai_suggestions = [
             # 转账页面智能账户推荐
             ('transfer', 'recent_accounts', '''{
@@ -258,39 +261,38 @@ try:
         INSERT IGNORE INTO AISuggestions (page_type, suggestion_type, content)
         VALUES (%s, %s, %s)
         ''', ai_suggestions)
-        print('✓ AI建议数据插入完成')
+        print('[OK] AI suggestions inserted')
 
     conn.commit()
     print('''
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║   ✅ 数据库初始化完成！                                   ║
-║                                                           ║
-║   创建的表：                                             ║
-║   • Users - 用户表                                        ║
-║   • Stocks - 股票表                                       ║
-║   • Fundings - 基金表                                     ║
-║   • Bills - 账单表                                        ║
-║   • TransferHistory - 转账历史表                         ║
-║   • AISuggestions - AI建议表                             ║
-║   • UserAIActions - 用户AI交互表                         ║
-║                                                           ║
-║   插入的数据：                                           ║
-║   • 1个测试用户 (UTSZ/admin)                             ║
-║   • 8条股票数据                                          ║
-║   • 5条基金数据                                          ║
-║   • 10条账单数据                                         ║
-║   • 5条转账历史数据                                      ║
-║   • AI建议配置数据                                       ║
-║                                                           ║
-║   🚀 现在可以启动应用了！                               ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
+============================================================
+DATABASE INITIALIZATION COMPLETE!
+============================================================
+
+Created tables:
+  - Users (user table)
+  - Stocks (stock table)
+  - Fundings (fund table)
+  - Bills (bill table)
+  - TransferHistory (transfer history table)
+  - AISuggestions (AI suggestions table)
+  - UserAIActions (user AI actions table)
+
+Inserted data:
+  - 1 test user (UTSZ/admin)
+  - 8 stock records
+  - 5 fund records
+  - 10 bill records
+  - 5 transfer history records
+  - AI suggestion data
+
+[SUCCESS] Ready to start the application!
+============================================================
     ''')
 
 except Exception as e:
-    print(f'❌ 创建数据库和表失败: {e}')
+    print(f'[ERROR] Database initialization failed: {e}')
     conn.rollback()
 finally:
     conn.close()
-    print('🔌 数据库连接已关闭')
+    print('[INFO] Database connection closed')
