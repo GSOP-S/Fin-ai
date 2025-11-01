@@ -7,7 +7,6 @@ from services.ai_service import (
     generate_ai_response, 
     get_page_suggestions,
     generate_market_analysis,
-    generate_stock_suggestion,
     generate_fund_suggestion,
     generate_bill_suggestion,
     generate_transfer_suggestion,
@@ -59,15 +58,7 @@ def market_analysis_api():
     analysis = ai_service.generate_market_analysis()
     return success_response(analysis)
 
-# 股票建议接口
-@ai_bp.route('/api/stock-suggestion', methods=['GET'])
-@handle_exceptions
-def stock_suggestion_api():
-    stock_code = request.args.get('code')
-    if not stock_code:
-        return error_response('缺少股票代码参数', status_code=400)
-    suggestion = ai_service.generate_stock_suggestion(stock_code)
-    return success_response(suggestion)
+
 
 # 基金建议接口
 @ai_bp.route('/api/fund-suggestion', methods=['GET'])

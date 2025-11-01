@@ -113,7 +113,6 @@ python init_db.py
 ║                                                           ║
 ║   创建的表：                                             ║
 ║   • Users - 用户表                                        ║
-║   • Stocks - 股票表                                       ║
 ║   • Fundings - 基金表                                     ║
 ║   • Bills - 账单表                                        ║
 ║   • TransferHistory - 转账历史表                         ║
@@ -122,7 +121,6 @@ python init_db.py
 ║                                                           ║
 ║   插入的数据：                                           ║
 ║   • 1个测试用户 (UTSZ/admin)                             ║
-║   • 8条股票数据                                          ║
 ║   • 5条基金数据                                          ║
 ║   • 10条账单数据                                         ║
 ║   • 5条转账历史数据                                      ║
@@ -444,7 +442,7 @@ setChatMessages(prev => [...prev, aiMessage]);
 
 | 特性 | v2.0 | v2.1 |
 |------|------|------|
-| 数据库表 | 5张表 | 7张表（新增Bills、TransferHistory） |
+| 数据库表 | 5张表 | 6张表（新增Bills、TransferHistory） |
 | 示例数据 | 少量 | 丰富（10条账单 + 5条转账） |
 | 气泡与对话框 | 可能遮挡 | 无缝衔接，不遮挡 |
 | 气泡转对话 | 仅点击图标 | 图标 + 气泡按钮 |
@@ -473,7 +471,7 @@ setChatMessages(prev => [...prev, aiMessage]);
 
 ### 测试1：数据库初始化
 - [ ] 运行 `python init_db.py`
-- [ ] 检查是否成功创建7张表
+- [ ] 检查是否成功创建6张表
 - [ ] 检查是否插入示例数据
 - [ ] 登录系统查看账单数据
 

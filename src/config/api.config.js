@@ -34,12 +34,7 @@ export const API_ENDPOINTS = {
     suggestion: '/api/transfer-suggestion',
   },
   
-  // 股票相关接口
-  stock: {
-    list: '/api/stocks',
-    detail: '/api/stock/:code',
-    suggestion: '/api/stock-suggestion',
-  },
+  
   
   // 基金相关接口
   fund: {

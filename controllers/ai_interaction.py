@@ -55,8 +55,7 @@ def ai_interact():
             return error_response(error='缺少页面类型参数', status_code=400)
         if page_type == 'market':
             analysis = ai_service.generate_market_analysis()
-        elif page_type == 'stock':
-            analysis = ai_service.generate_stock_suggestion(context.get('stock', {}))
+        
         elif page_type == 'fund':
             analysis = ai_service.generate_fund_suggestion(context.get('fund', {}))
         elif page_type == 'bill':

@@ -3,28 +3,11 @@
 负责调用各 Mapper 提供高阶数据查询接口，供业务/AI 层调用，屏蔽数据库细节。
 """
 from typing import Any, Dict, Optional
-from mapper import StockMapper, FundMapper, AISuggestionMapper
+from mapper import FundMapper, AISuggestionMapper
 
 
 class DataService:
     """对接 Mapper 的聚合查询服务"""
-
-    # --- 股票相关 ---------------------------------------------------------
-    @staticmethod
-    def get_stock_by_name(name: str) -> Optional[Dict[str, Any]]:
-        """根据股票名称获取单条股票信息"""
-        return StockMapper.get_stock_details(name)
-
-    @staticmethod
-    def list_stocks(
-        page: int = 1,
-        page_size: int = 20,
-        industry: Optional[str] = None,
-        order_by: str = "code",
-        order_dir: str = "asc",
-    ) -> Dict[str, Any]:
-        """分页获取股票列表"""
-        return StockMapper.get_stocks(page, page_size, industry, order_by, order_dir)
 
     # --- 基金相关 ---------------------------------------------------------
     @staticmethod

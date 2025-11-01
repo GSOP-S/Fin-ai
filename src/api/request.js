@@ -2,9 +2,9 @@
 // 通用 HTTP 请求封装，基于浏览器 fetch API
 // 使用示例：
 // import request from './request';
-// const data = await request('/api/stocks');
+// const data = await request('/api/funds');
 
-const BASE_URL = '' // 同源，若需要可替换为后端服务地址，如 'http://localhost:5000'
+const BASE_URL = 'http://localhost:5000' // 后端API服务器地址
 
 /**
  * 统一请求封装

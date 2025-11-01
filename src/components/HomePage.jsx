@@ -30,7 +30,7 @@ function HomePage({ onNavigate }) {
       id: 'financing',
       title: '投资理财',
       icon: '💰',
-      description: '股票、基金等金融产品',
+      description: '基金等金融产品',
       onClick: () => onNavigate('financing')
     },
     {
@@ -143,19 +143,6 @@ function HomePage({ onNavigate }) {
           </button>
         </div>
         <div className="product-cards">
-          <div 
-            className="product-card" 
-            onClick={() => {
-              onNavigate('financing');
-              // 延迟设置子标签，确保导航完成
-              setTimeout(() => window.financingTab = 'stocks', 100);
-            }}
-          >
-            <div className="product-icon">📈</div>
-            <div className="product-info">
-              <h4>股票投资</h4>
-            </div>
-          </div>
           <div 
             className="product-card" 
             onClick={() => {

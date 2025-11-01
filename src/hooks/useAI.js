@@ -27,11 +27,13 @@ export function useAI(options = {}) {
   
   /**
    * 显示AI建议
-   * @param {string} pageType - 页面类型 (bill/transfer/stock...)
+   * @param {string} pageType - 页面类型 (bill/transfer/fund...)
    * @param {object} context - 上下文数据
    * @param {object} configOverrides - 配置覆盖
    */
   const show = useCallback(async (pageType, context = {}, configOverrides = {}) => {
+    console.log(`[AI] 显示建议: pageType=${pageType}, context=`, context);
+    
     // 清除之前的定时器
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
@@ -51,6 +53,7 @@ export function useAI(options = {}) {
       let config;
       try {
         config = getAIConfig(pageType, { ...options, ...configOverrides });
+        console.log(`[AI] 配置:`, config);
       } catch (configError) {
         console.error('AI配置获取失败:', configError);
         // 使用默认配置继续
@@ -58,7 +61,9 @@ export function useAI(options = {}) {
       }
       
       // 调用API
+      console.log(`[AI] 调用API: pageType=${pageType}`);
       const result = await generateAISuggestion(pageType, context);
+      console.log(`[AI] API返回结果:`, result);
       
       // 即使AI调用失败，generateAISuggestion已返回备用建议
       
@@ -67,6 +72,7 @@ export function useAI(options = {}) {
       let text;
       try {
         text = formatAISuggestion(result, pageType);
+        console.log(`[AI] 格式化后的文本:`, text);
       } catch (formatError) {
         console.error('AI建议格式化失败:', formatError);
         // 直接使用备用建议中的文本内容
@@ -79,6 +85,7 @@ export function useAI(options = {}) {
       
       // 自动显示
       if (config.autoShow) {
+        console.log(`[AI] 自动显示建议: ${text}`);
         setIsVisible(true);
         
         // 自动隐藏
@@ -158,6 +165,36 @@ export function useAI(options = {}) {
   }, []);
   
   /**
+   * 切换语音播报状态 - 从App.jsx迁移而来
+   * @param {string} text - 要播报的文本（可选）
+   */
+  const toggleSpeech = useCallback((text) => {
+    if (!window.speechSynthesis) {
+      console.warn('浏览器不支持语音播报');
+      return;
+    }
+    
+    // 如果有正在播放的语音，先停止
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      return; // 点击按钮时停止播放，不再继续
+    }
+    
+    // 如果提供了文本，则开始播报
+    if (text) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.9;
+        speechRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('语音播报失败:', err);
+      }
+    }
+  }, []);
+  
+  /**
    * 停止语音播报
    */
   const stopSpeaking = useCallback(() => {
@@ -192,6 +229,7 @@ export function useAI(options = {}) {
     show,             // 显示建议
     hide,             // 隐藏建议
     speak,            // 语音播报
+    toggleSpeech,     // 切换语音播报状态（从App.jsx迁移而来）
     stopSpeaking,     // 停止播报
   };
 }

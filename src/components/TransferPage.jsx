@@ -7,7 +7,6 @@ function TransferPage({ onNavigate, onShowAI }) {
   const [transferAmount, setTransferAmount] = useState('');
   const [isFirstTimeAccount, setIsFirstTimeAccount] = useState(false);
   const [accountType, setAccountType] = useState('');
-  const [aiSuggestionData, setAiSuggestionData] = useState(null);
 
   // 模拟历史转账账户数据
   const recentAccounts = [
@@ -55,23 +54,19 @@ function TransferPage({ onNavigate, onShowAI }) {
     
     // 当输入完整账号后，触发AI建议
     if (value.length >= 10 && onShowAI) {
-      const suggestionData = {
+      // 准备传递给后端AI服务的数据
+      const transferData = {
         recipientAccount: value,
         accountType: detectedAccountType,
         isFirstTimeAccount: isFirstTime,
         recentAccounts,
-        amount: transferAmount,
-        arrivalTime: detectedAccountType === 'same_bank' ? '实时到账' : '预计1-2小时',
-        suggestion: isFirstTime ? '该账户近期无交易记录，建议核实收款人信息' : '常用账户，可放心转账'
+        amount: transferAmount
       };
-      
-      setAiSuggestionData(suggestionData);
       
       // 自动触发AI建议气泡（延迟500ms，让用户看到账户类型变化）
       setTimeout(() => {
         onShowAI('transfer', {
-          transferData: suggestionData,
-          ...suggestionData
+          transferData
         }, {
           autoShow: true,
           autoHideDelay: 25000,
@@ -85,14 +80,17 @@ function TransferPage({ onNavigate, onShowAI }) {
   const triggerAISuggestion = () => {
     if (!onShowAI) return;
     
-    const suggestionData = aiSuggestionData || {
+    // 准备传递给后端AI服务的数据
+    const transferData = {
+      recipientAccount,
+      accountType,
+      isFirstTimeAccount,
       recentAccounts,
-      suggestion: '选择常用账户可以更快完成转账'
+      amount: transferAmount
     };
     
     onShowAI('transfer', {
-      transferData: suggestionData,
-      ...suggestionData
+      transferData
     }, {
       autoShow: true,
       autoHideDelay: 0, // 手动触发不自动隐藏

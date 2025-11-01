@@ -6,7 +6,7 @@
 // 不同页面的AI配置
 export const AI_PAGE_CONFIGS = {
   home: {
-    autoShow: false,
+    autoShow: true,
     autoHideDelay: 20000,
     speakEnabled: false,
     bubbleTitle: '🏠 智能助手',
@@ -26,11 +26,11 @@ export const AI_PAGE_CONFIGS = {
     bubbleTitle: '💸 转账建议',
   },
   
-  stock: {
-    autoShow: false,  // 股票建议不自动弹出
-    autoHideDelay: 15000,
+  market: {
+    autoShow: true,
+    autoHideDelay: 25000,
     speakEnabled: false,
-    bubbleTitle: '📈 投资建议',
+    bubbleTitle: '📈 市场分析',
   },
   
   fund: {

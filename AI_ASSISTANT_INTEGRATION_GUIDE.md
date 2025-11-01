@@ -21,7 +21,7 @@
 ```javascript
 // 通用AI建议生成函数
 generateAISuggestion(pageType, context)
-  - pageType: 'market' | 'bill' | 'transfer' | 'stock' | 'fund'
+  - pageType: 'market' | 'bill' | 'transfer' | 'fund'
   - context: 页面相关的上下文数据
   - 返回: Promise<AI建议数据>
 
@@ -46,7 +46,6 @@ formatComplexSuggestion(result)
   'market': '/api/market-analysis',          // GET
   'bill': '/api/bill-analysis',              // POST
   'transfer': '/api/transfer-suggestion',    // POST
-  'stock': '/api/stock-suggestion',          // POST
   'fund': '/api/fund-suggestion'             // POST
 }
 ```
@@ -204,9 +203,11 @@ formatComplexSuggestion(result)
 **动画**：淡入 + 轻微上升
 **自动隐藏**：根据内容类型设置不同的显示时长
   - 市场分析：30秒
-  - 账单分析：30秒
+  - 账单分析：开启
+  - 转账建议：关闭（避免干扰输入）
+  - 基金：开启
   - 转账建议：25秒
-  - 股票/基金：20秒
+  - 基金：20秒
 
 ### 交互优化
 

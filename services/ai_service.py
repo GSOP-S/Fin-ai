@@ -18,57 +18,25 @@ class AIService:
         
         Args:
             prompt: 用户输入的提示
-            context: 上下文信息，可能包含股票/基金数据等
+            context: 上下文信息，可能包含基金数据等
             
         Returns:
             生成的AI回复文本
         """
-        stock_name = context.get('stockData', {}).get('name') if context else None
         fund_name = context.get('fundData', {}).get('name') if context else None
-        
-        # 处理股票相关查询
-        if stock_name:
-            return self._generate_stock_analysis(stock_name)
-        
+
         # 处理基金相关查询
         if fund_name:
             return self._generate_fund_analysis(fund_name)
         
         # 通用回复逻辑
-        if '股票' in prompt or '行情' in prompt:
-            return "您好！我是股票智能助手。请告诉我您想了解哪只股票，我可以为您提供详细分析。"
-        elif '基金' in prompt:
+        if '基金' in prompt:
             return "您好！我是基金智能助手。请告诉我您想了解哪只基金，我可以为您提供详细分析。"
         elif '买入' in prompt or '卖出' in prompt:
             return "投资决策需要综合考虑多方面因素，建议您在做出投资决策前，充分了解相关风险。"
         else:
             return "您好！我是您的智能助手，请问有什么可以帮助您的？"
-    
-    def _generate_stock_analysis(self, stock_name):
-        """生成股票分析报告"""
-        stock_info = self.data_service.get_stock_by_name(stock_name)
-        if not stock_info:
-            return "未找到该股票的相关信息。"
 
-        response = (
-            f"关于{stock_info['name']}({stock_info['code']})的分析：\n"
-            f"- 所属行业：{stock_info['industry']}\n"
-            f"- 市值：{stock_info['market_cap']}\n"
-            f"- PE：{stock_info['pe']}\n"
-            f"- 近期表现：{stock_info['recent_performance']}\n"
-            f"- 波动性：{stock_info['volatility']}\n\n"
-        )
-
-        # 行业特定建议
-        industry_suggestions = {
-            '白酒': '白酒行业具有较强的品牌价值和定价能力，建议关注高端白酒的长期投资价值。',
-            '新能源': '新能源行业处于快速发展期，成长性强但波动较大，建议分批建仓，控制仓位。',
-            '互联网': '互联网行业估值已回归合理区间，具有长期投资价值，可逢低布局龙头企业。',
-            '银行': '金融板块估值较低，股息率较高，适合稳健型投资者配置。',
-            '保险': '金融板块估值较低，股息率较高，适合稳健型投资者配置。'
-        }
-        response += industry_suggestions.get(stock_info['industry'], '该行业当前暂无特定分析建议。')
-        return response
     
     def _generate_fund_analysis(self, fund_name):
         """生成基金分析报告"""
@@ -87,7 +55,6 @@ class AIService:
 
         # 基金类型特定建议
         fund_type_suggestions = {
-            '股票型': '股票型基金风险较高，收益波动较大，适合风险承受能力较强的投资者长期持有。',
             '混合型': '混合型基金风险适中，兼顾稳定性和收益性，适合大部分投资者配置。',
             '债券型': '债券型基金风险较低，收益相对稳定，适合风险承受能力较弱的投资者。',
             '货币型': '货币型基金风险最低，流动性最好，适合短期资金停泊。',
@@ -101,7 +68,7 @@ class AIService:
         获取页面特定的AI建议
         
         Args:
-            page_type: 页面类型，如'home', 'stock', 'fund', 'bill', 'transfer'等
+            page_type: 页面类型，如'home', 'fund', 'bill', 'transfer', 'market'等
             context: 上下文信息，可能包含用户ID、页面数据等
             
         Returns:
@@ -120,14 +87,14 @@ class AIService:
             # 2. 如果数据库无数据，则动态生成
             if page_type == 'home':
                 suggestion = self.generate_home_suggestion(context or {})
-            elif page_type == 'stock':
-                suggestion = self.generate_stock_suggestion((context or {}).get('stock', {}))
             elif page_type == 'fund':
                 suggestion = self.generate_fund_suggestion((context or {}).get('fund', {}))
             elif page_type == 'bill':
                 suggestion = self.generate_bill_suggestion(context or {})
             elif page_type == 'transfer':
                 suggestion = self.generate_transfer_suggestion(context or {})
+            elif page_type == 'market':
+                suggestion = self.generate_market_analysis()
             else:
                 suggestion = {'suggestion': '暂无相关建议'}
 
@@ -144,60 +111,27 @@ class AIService:
     
     def generate_market_analysis(self):
         """
-        生成市场分析和股票推荐
+        生成市场分析
         返回格式化的市场分析文本
         """
         # 模拟市场分析数据
         analysis = {
-            "marketOverview": '今日A股三大指数小幅上涨，沪指涨0.82%，深成指涨1.25%，创业板指涨1.68%。市场成交量有所放大，北向资金净流入超50亿元。',
+            "marketOverview": '今日基金市场整体表现良好，各类基金指数普遍上涨。市场成交量有所放大，资金净流入超50亿元。',
             "hotSectors": ['新能源', '半导体', '医药生物'],
-            "recommendedStocks": [
-                { "name": '贵州茅台', "code": '600519', "reason": '白酒龙头，业绩稳健，具有长期投资价值' },
-                { "name": '宁德时代', "code": '300750', "reason": '新能源赛道核心标的，海外订单增长强劲' },
-                { "name": '腾讯控股', "code": '0700.HK', "reason": '互联网龙头，估值处于历史低位，业绩开始回暖' }
+            "recommendedFunds": [
+                { "name": '易方达蓝筹精选混合', "code": '005827', "reason": '绩优混合型基金，长期表现稳健，适合长期持有' },
+                { "name": '诺安成长混合', "code": '320007', "reason": '成长型基金，投资于高成长性行业，波动较大但收益潜力高' },
+                { "name": '华夏回报混合A', "code": '002001', "reason": '平衡型基金，风险收益均衡，适合稳健型投资者' }
             ]
         }
 
         # 构建分析文本
         analysis_text = f"市场分析：{analysis['marketOverview']}\n\n热门板块：{'、'.join(analysis['hotSectors'])}\n\n"
-        analysis_text += '为您推荐以下股票：\n'
-        for i, stock in enumerate(analysis['recommendedStocks']):
-            analysis_text += f"{i + 1}. {stock['name']} ({stock['code']}) - {stock['reason']}\n"
+        analysis_text += '为您推荐以下基金：\n'
+        for i, fund in enumerate(analysis['recommendedFunds']):
+            analysis_text += f"{i + 1}. {fund['name']} ({fund['code']}) - {fund['reason']}\n"
 
         return {'analysis': analysis_text, 'data': analysis}
-    
-    def generate_stock_suggestion(self, stock):
-        """
-        根据股票信息生成投资建议
-        
-        Args:
-            stock: 可以是股票信息字典/股票代码/名称
-        Returns:
-            格式化的建议文本
-        """
-        if not stock:
-            return {'suggestion': ''}
-
-        # 如果传入的是字符串，尝试根据名称或代码查询股票详情
-        if isinstance(stock, str):
-            detail = self.data_service.get_stock_by_name(stock) or {}
-            stock = detail if detail else {}
-
-        if not stock:
-            return {'suggestion': '未找到相关股票信息'}
-
-        is_up = stock.get('change', 0) >= 0
-        name = stock.get('name', '')
-        code = stock.get('code', '')
-        change_percent = stock.get('changePercent', '')
-        
-        suggestion = ''
-        if is_up:
-            suggestion = f"{name} ({code}) 目前上涨 {change_percent}，表现强势。建议关注其成交量变化和市场热点持续性，可考虑逢低买入策略。"
-        else:
-            suggestion = f"{name} ({code}) 目前下跌 {change_percent}，可能存在短期调整。建议观察其支撑位表现，可考虑分批建仓策略。"
-        
-        return {'suggestion': suggestion, 'stock': stock}
     
     def generate_fund_suggestion(self, fund):
         """
@@ -366,7 +300,7 @@ class AIService:
         elif user_data.get('riskPreference', '') == 'moderate':
             suggestions.append("根据您的风险偏好，推荐平衡型基金：XX平衡混合基金（近一年收益率8.5%）。")
         else:
-            suggestions.append("根据您的风险偏好，推荐进取型基金：XX科技股票基金（近一年收益率15.2%）。")
+            suggestions.append("根据您的风险偏好，推荐进取型基金：XX科技成长基金（近一年收益率15.2%）。")
         
         # 组合建议文本
         suggestion_text = greeting + "\n" + "\n".join(suggestions)
@@ -453,9 +387,6 @@ def get_page_suggestions(page_type, context=None):
 
 def generate_market_analysis():
     return ai_service.generate_market_analysis()
-
-def generate_stock_suggestion(stock):
-    return ai_service.generate_stock_suggestion(stock)
 
 def generate_fund_suggestion(fund):
     return ai_service.generate_fund_suggestion(fund)

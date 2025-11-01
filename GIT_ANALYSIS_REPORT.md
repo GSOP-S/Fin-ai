@@ -99,7 +99,7 @@
 
 12:17 - SZ.Song - Initial commit: 金融理财APP前端项目
     ├─ 创建前端项目基础结构
-    ├─ 添加React组件（Login, StockList, FundList等）
+    ├─ 添加React组件（Login, FundList等）
     ├─ 添加Flask后端
     └─ 共4366行新增代码
 

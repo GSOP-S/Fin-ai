@@ -36,20 +36,7 @@ try:
         )
         ''')
 
-        # 创建Stocks表
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Stocks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            code VARCHAR(20) NOT NULL UNIQUE,
-            industry VARCHAR(50) NOT NULL,
-            market_cap VARCHAR(50) NOT NULL,
-            pe VARCHAR(20) NOT NULL,
-            recent_performance VARCHAR(100) NOT NULL,
-            volatility VARCHAR(20) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
+        
 
         # 创建Fundings表
         cursor.execute('''
@@ -139,21 +126,7 @@ try:
         ('UTSZ', 'admin', 'UTSZ用户')
         ''')
 
-        # 插入初始股票数据
-        stock_data = [
-            ('贵州茅台', '600519', '白酒', '2.5万亿', '30.5', '连续3个月上涨', '低'),
-            ('五粮液', '000858', '白酒', '9000亿', '25.2', '震荡上行', '中等'),
-            ('宁德时代', '300750', '新能源', '1.2万亿', '45.8', '波动较大', '高'),
-            ('腾讯控股', '00700', '互联网', '3万亿', '18.5', '稳步回升', '中等'),
-            ('阿里巴巴', '9988', '互联网', '2.8万亿', '15.2', '底部企稳', '中等'),
-            ('美团-W', '03690', '互联网', '8000亿', '-', '持续调整', '高'),
-            ('招商银行', '600036', '银行', '1.5万亿', '8.5', '小幅波动', '低'),
-            ('中国平安', '601318', '保险', '9000亿', '6.8', '横盘整理', '低')
-        ]
-        cursor.executemany('''
-        INSERT IGNORE INTO Stocks (name, code, industry, market_cap, pe, recent_performance, volatility)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', stock_data)
+        
 
         # 插入初始基金数据
         fund_data = [
@@ -261,7 +234,6 @@ try:
 ║                                                           ║
 ║   创建的表：                                             ║
 ║   • Users - 用户表                                        ║
-║   • Stocks - 股票表                                       ║
 ║   • Fundings - 基金表                                     ║
 ║   • Bills - 账单表                                        ║
 ║   • TransferHistory - 转账历史表                         ║
@@ -270,7 +242,6 @@ try:
 ║                                                           ║
 ║   插入的数据：                                           ║
 ║   • 1个测试用户 (UTSZ/admin)                             ║
-║   • 8条股票数据                                          ║
 ║   • 5条基金数据                                          ║
 ║   • 10条账单数据                                         ║
 ║   • 5条转账历史数据                                      ║

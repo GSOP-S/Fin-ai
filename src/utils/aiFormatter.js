@@ -31,7 +31,6 @@ export function formatAISuggestion(result, pageType = 'default') {
   const formatters = {
     bill: formatBillSuggestion,
     transfer: formatTransferSuggestion,
-    stock: formatStockSuggestion,
     fund: formatFundSuggestion,
     default: formatDefaultSuggestion,
   };
@@ -96,16 +95,7 @@ function formatTransferSuggestion(result) {
   return text || '暂无转账建议';
 }
 
-/**
- * 格式化股票建议
- */
-function formatStockSuggestion(result) {
-  if (result.stock) {
-    const { name, code, changePercent } = result.stock;
-    return result.suggestion || `${name}(${code}) 当前涨跌：${changePercent}`;
-  }
-  return result.suggestion || '暂无股票建议';
-}
+
 
 /**
  * 格式化基金建议
