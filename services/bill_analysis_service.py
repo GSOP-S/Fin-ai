@@ -52,7 +52,9 @@ class BillAnalysisService:
             'summary': summary,
             'categoryDistribution': category_distribution,
             'abnormalTransactions': abnormal_transactions,
-            'suggestions': suggestions
+            'suggestions': suggestions,
+            'categories': category_distribution,  # 添加categories字段，与前端期望一致
+            'abnormalItems': abnormal_transactions  # 添加abnormalItems字段，与前端期望一致
         }
     
     def _calculate_summary(self, bills: List[Dict]) -> Dict:

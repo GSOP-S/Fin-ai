@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchUserBills } from '../api/bill';
+import { fetchUserBills, fetchBillAnalysis } from '../api/bill';
 import './BillDetail.css';
 
 const BillDetail = ({ onNavigate, onShowAI }) => {
@@ -8,6 +8,7 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [aiSuggestionTriggered, setAiSuggestionTriggered] = useState(false);
+  const [billAnalysis, setBillAnalysis] = useState(null);
 
   // 模拟账单数据
   useEffect(() => {
@@ -72,6 +73,7 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
       setBills(mockBills);
       setLoading(false);
       setAiSuggestionTriggered(false); // 重置触发状态
+      setBillAnalysis(null); // 重置账单分析
     }, 800);
   }, [selectedMonth]);
   
@@ -80,18 +82,29 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
     if (!loading && bills.length > 0 && !aiSuggestionTriggered && onShowAI) {
       // 延迟触发，让用户先看到账单列表
       setTimeout(() => {
-        onShowAI('bill', { 
-          bills,
-          billData: bills  // 直接传递账单数据给后端
-        }, {
-          autoShow: true,
-          autoHideDelay: 30000, // 账单分析显示30秒
-          speakEnabled: true
-        });
-        setAiSuggestionTriggered(true);
+        // 调用后端API获取账单分析
+        fetchBillAnalysis('user123', bills, selectedMonth)
+          .then(analysis => {
+            if (analysis && analysis.success) {
+              setBillAnalysis(analysis.data);
+              // 触发AI建议显示
+              onShowAI('bill', { 
+                bills,
+                billData: analysis.data  // 使用后端返回的分析数据
+              }, {
+                autoShow: true,
+                autoHideDelay: 30000, // 账单分析显示30秒
+                speakEnabled: true
+              });
+              setAiSuggestionTriggered(true);
+            }
+          })
+          .catch(error => {
+            console.error('获取账单分析失败:', error);
+          });
       }, 1500);
     }
-  }, [loading, bills, aiSuggestionTriggered, onShowAI]);
+  }, [loading, bills, aiSuggestionTriggered, onShowAI, selectedMonth]);
 
   // 格式化金额显示
   const formatAmount = (amount) => {
@@ -136,14 +149,36 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
             className="ai-analysis-btn"
             onClick={() => {
               if (onShowAI) {
-                onShowAI('bill', { 
-                  bills,
-                  billData: bills  // 直接传递账单数据给后端
-                }, {
-                  autoShow: true,
-                  autoHideDelay: 0, // 手动触发时不自动隐藏
-                  speakEnabled: false
-                });
+                // 如果已有分析数据，直接显示；否则重新获取
+                if (billAnalysis) {
+                  onShowAI('bill', { 
+                    bills,
+                    billData: billAnalysis  // 使用已有的分析数据
+                  }, {
+                    autoShow: true,
+                    autoHideDelay: 0, // 手动触发时不自动隐藏
+                    speakEnabled: false
+                  });
+                } else {
+                  // 重新获取分析数据
+                  fetchBillAnalysis('user123', bills, selectedMonth)
+                    .then(analysis => {
+                      if (analysis && analysis.success) {
+                        setBillAnalysis(analysis.data);
+                        onShowAI('bill', { 
+                          bills,
+                          billData: analysis.data  // 使用后端返回的分析数据
+                        }, {
+                          autoShow: true,
+                          autoHideDelay: 0, // 手动触发时不自动隐藏
+                          speakEnabled: false
+                        });
+                      }
+                    })
+                    .catch(error => {
+                      console.error('获取账单分析失败:', error);
+                    });
+                }
               }
             }}
           >

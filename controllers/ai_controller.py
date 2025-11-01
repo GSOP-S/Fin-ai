@@ -71,14 +71,30 @@ def fund_suggestion_api():
     return success_response(suggestion)
 
 # 账单分析接口
-@ai_bp.route('/api/bill-analysis', methods=['GET'])
+@ai_bp.route('/api/bill-analysis', methods=['GET', 'POST'])
 @handle_exceptions
 def bill_analysis_api():
-    user_id = request.args.get('userId')
-    if not user_id:
-        return error_response('缺少用户ID参数', status_code=400)
-    analysis = ai_service.generate_bill_suggestion({'userId': user_id})
-    return success_response(analysis)
+    if request.method == 'GET':
+        user_id = request.args.get('userId')
+        if not user_id:
+            return error_response('缺少用户ID参数', status_code=400)
+        analysis = ai_service.generate_bill_suggestion({'userId': user_id})
+        return success_response(analysis)
+    else:  # POST方法
+        data = request.json or {}
+        user_id = data.get('userId')
+        bills = data.get('bills', [])
+        month = data.get('month')
+        
+        if not user_id:
+            return error_response('缺少用户ID参数', status_code=400)
+            
+        # 使用bill_analysis_service处理账单数据
+        from services.bill_analysis_service import BillAnalysisService
+        analysis_service = BillAnalysisService()
+        analysis = analysis_service.analyze_bills(bills, month, user_id)
+        
+        return success_response(analysis)
 
 # 转账建议接口
 @ai_bp.route('/api/transfer-suggestion', methods=['GET'])
