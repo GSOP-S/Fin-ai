@@ -31,7 +31,6 @@ from controllers.bill_controller import bill_bp
 from controllers.transfer_controller import transfer_bp
 from controllers.home_controller import home_bp
 from controllers.user_controller import user_bp
-from controllers.ai_controller import ai_bp
 from controllers.ai_interaction import ai_interaction_bp
 from controllers.fund_controller import fund_bp
 
@@ -39,9 +38,12 @@ app.register_blueprint(bill_bp)
 app.register_blueprint(transfer_bp)
 app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
-app.register_blueprint(ai_bp)
 app.register_blueprint(ai_interaction_bp)
 app.register_blueprint(fund_bp)
+
+# 注册AI路由（使用新的注册方式）
+from controllers.ai_controller import register_ai_routes
+register_ai_routes(app)
 
 # 健康检查接口
 @app.route('/health', methods=['GET'])

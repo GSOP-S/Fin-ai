@@ -9,6 +9,7 @@ import TransferPage from './components/TransferPage';
 import BillDetail from './components/BillDetail';
 import { generateAIResponse, generateAISuggestion } from './api/ai';
 import { submitFeedback } from './api/feedback';
+import { showFundSuggestion } from './api/fund';
 import request from './api/request';
 import { useAI} from './hooks/useAI';
 
@@ -43,19 +44,22 @@ function App() {
 
   // 处理用户登录
   const handleLogin = (userData) => {
+    console.log('[App] 用户登录:', userData);
     setUser(userData);
+    
+    // 确保用户登录后立即触发首页AI建议
+    setTimeout(() => {
+      console.log('[App] 登录后触发AI建议');
+      triggerPageAISuggestion('home');
+    }, 1000);
   };
 
   // 处理选择基金
   const handleSelectFund = async (fund) => {
     setSelectedFund(fund);
     
-    // 使用统一的AI气泡显示
-    ai.show('fund', { fund }, {
-      autoShow: true,
-      autoHideDelay: 20000, // 20秒后自动隐藏
-      speakEnabled: false
-    });
+    // 使用fund.js中的showFundSuggestion函数处理基金建议的显示
+    showFundSuggestion(fund, ai);
   };
 
   
@@ -91,7 +95,7 @@ function App() {
     // 根据当前页面渲染不同内容
     switch (currentPage) {
       case 'home':
-        return <HomePage onNavigate={handleNavigate} />;
+          return <HomePage onNavigate={handleNavigate} user={user} />;
       
       case 'financing':
         // 理财页面显示基金标签
@@ -215,6 +219,15 @@ function App() {
       return; // 未登录不触发
     }
     
+    // 确保AI状态已初始化
+    if (!ai || !ai.show) {
+      console.log('[App] AI状态未初始化，延迟重试');
+      setTimeout(() => {
+        triggerPageAISuggestion(page);
+      }, 100);
+      return;
+    }
+    
     switch(page) {
       case 'home':
         // 首页显示欢迎和快捷操作建议
@@ -316,9 +329,7 @@ function App() {
       )}
   
       {/* 悬浮AI助手按钮 */}
-      <AIAssistant ai={ai} />
-
-  
+      <AIAssistant ai={ai} currentPage={currentPage} />
 
     </div>
   );

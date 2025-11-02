@@ -4,7 +4,9 @@
 // import request from './request';
 // const data = await request('/api/funds');
 
-const BASE_URL = 'http://localhost:5000' // 后端API服务器地址
+import { API_CONFIG } from '../config/api.config';
+
+const BASE_URL = API_CONFIG.baseURL // 使用API_CONFIG中的baseURL
 
 /**
  * 统一请求封装

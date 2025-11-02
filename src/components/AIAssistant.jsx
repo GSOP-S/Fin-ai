@@ -3,7 +3,7 @@ import AIChat from './ai/AIChat';
 import AISuggestionBubble from './ai/AISuggestionBubble';
 import './AIAssistant.css';
 
-const AIAssistant = ({ ai }) => {
+const AIAssistant = ({ ai, currentPage }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -190,7 +190,7 @@ const AIAssistant = ({ ai }) => {
         {ai.isVisible && (
           <AISuggestionBubble
             ai={ai}
-            marketAnalysisShown={ai.pageType === 'market'}
+            marketAnalysisShown={currentPage === 'financing'}
             onClose={handleBubbleClose}
             onOpenChat={handleOpenChatFromBubble}
             onFeedback={handleBubbleFeedback}

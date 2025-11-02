@@ -20,6 +20,7 @@ const Login = ({ onLogin }) => {
       const result = await loginUser({ username, password });
       if (result.success) {
         const user = {
+          id: result.data.username, // 添加id字段，使用username作为id
           username: result.data.username,
           displayName: result.data.display_name,
         };

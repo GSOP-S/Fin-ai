@@ -1,7 +1,7 @@
 import React from 'react';
 import './HomePage.css';
 
-function HomePage({ onNavigate }) {
+function HomePage({ onNavigate, user }) {
   // 模拟用户账户信息
   const accountInfo = {
     balance: '128,563.45',

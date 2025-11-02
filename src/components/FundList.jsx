@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './FundList.css';
 import { fetchFundList } from '../api/fund';
 
-const FundList = () => {
+const FundList = ({ onSelectFund }) => {
   const [selectedFund, setSelectedFund] = useState(null);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +77,10 @@ const FundList = () => {
 
   const handleFundClick = (fund) => {
     setSelectedFund(fund);
+    // 如果传入了onSelectFund回调，则调用它
+    if (onSelectFund) {
+      onSelectFund(fund);
+    }
   };
 
   const renderContent = () => {

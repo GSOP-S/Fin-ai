@@ -62,7 +62,12 @@ export function useAI(options = {}) {
       
       // 调用API
       console.log(`[AI] 调用API: pageType=${pageType}`);
-      const result = await generateAISuggestion(pageType, context);
+      // 确保用户信息被正确传递
+      const apiContext = {
+        ...context,
+        userId: options.userId || context.userId || null
+      };
+      const result = await generateAISuggestion(pageType, apiContext);
       console.log(`[AI] API返回结果:`, result);
       
       // 即使AI调用失败，generateAISuggestion已返回备用建议
@@ -111,10 +116,20 @@ export function useAI(options = {}) {
       console.error('AI建议获取失败:', err);
       setError(err.message);
       
-      // 显示错误提示
-      // 显示具体错误信息以便诊断
-      // 显示完整错误信息以便诊断
-      setSuggestionText(`抱歉，AI助手暂时不可用: ${JSON.stringify(err)}`);
+      // 显示错误提示，使用备用建议
+      const fallbackSuggestions = {
+        home: '欢迎使用智能银行系统！建议您定期查看账户明细，合理规划理财投资。',
+        fund: '基金投资有风险，建议根据自身风险承受能力选择合适的基金产品。',
+        bill: '建议您定期查看账单明细，合理控制支出，提高储蓄率。',
+        transfer: '转账时请仔细核对收款人信息，大额转账建议分批进行。',
+        market: '市场有风险，投资需谨慎。建议分散投资，降低风险。',
+      };
+      
+      // 使用页面类型对应的备用建议，如果没有则使用通用建议
+      const pageType = err.pageType || 'default';
+      const fallbackText = fallbackSuggestions[pageType] || '暂无相关建议，请稍后再试。';
+      
+      setSuggestionText(fallbackText);
       setIsVisible(true);
       
       return null;

@@ -1,117 +1,107 @@
-from flask import Blueprint, request
+"""
+AI控制器 Controller
+处理所有AI相关的HTTP请求，直接调用各个专门的服务
+"""
+
+from flask import request, jsonify
+from services.home_suggestion_service import HomeSuggestionService
+from services.fund_service import FundService
+from services.bill_analysis_service import BillAnalysisService
+from services.transfer_suggestion_service import TransferSuggestionService
 from services.ai_service import AIService
-from utils.response import success_response, error_response, handle_exceptions
 
-# 移除旧的 utils.db 和 generate_* 函数导入
-from services.ai_service import (
-    generate_ai_response, 
-    get_page_suggestions,
-    generate_market_analysis,
-    generate_fund_suggestion,
-    generate_bill_suggestion,
-    generate_transfer_suggestion,
-    generate_home_suggestion
-)
-from utils.db import get_db_connection, close_db_connection
 
-# 初始化Blueprint
-ai_bp = Blueprint('ai', __name__)
-
+# 创建服务实例
+home_suggestion_service = HomeSuggestionService()
+fund_service = FundService()
+bill_analysis_service = BillAnalysisService()
+transfer_suggestion_service = TransferSuggestionService()
 ai_service = AIService()
 
-# 兼容旧路径：AI助手对话接口
-# 注意：/api/ai/interact 路由已移至 ai_interaction.py，提供更完善的功能
-@ai_bp.route('/api/ai-assistant', methods=['POST'])
-@handle_exceptions
-def ai_assistant_api():
-    data = request.json or {}
-    prompt = data.get('prompt', '')
-    context = data.get('context', {})
-    response_text = ai_service.generate_ai_response(prompt, context)
-    return success_response(response_text)
 
-# 获取特定页面的AI建议（GET 旧版本，POST 新版本）
-@ai_bp.route('/api/ai-suggestions/<page_type>', methods=['GET'])  # 旧路径，兼容
-@ai_bp.route('/api/ai/suggestion', methods=['POST'])  # 新路径，前端传入 pageType
-@handle_exceptions
-def get_ai_suggestions(page_type=None):
-    if request.method == 'GET':
-        # 保持旧接口：/api/ai-suggestions/<page_type>
-        context = {}
-        target_page = page_type
-    else:
-        # 新接口：/api/ai/suggestion
-        data = request.json or {}
-        target_page = data.get('pageType')
-        context = data.get('context', {}) or {}
-
-    if not target_page:
-        return error_response('缺少 pageType 参数', status_code=400)
-
-    suggestions = ai_service.get_page_suggestions(target_page, context)
-    return success_response(suggestions)
-
-# 市场分析接口
-@ai_bp.route('/api/market-analysis', methods=['GET'])
-@handle_exceptions
-def market_analysis_api():
-    analysis = ai_service.generate_market_analysis()
-    return success_response(analysis)
-
-
-
-# 基金建议接口
-@ai_bp.route('/api/fund-suggestion', methods=['GET'])
-@handle_exceptions
-def fund_suggestion_api():
-    fund_code = request.args.get('code')
-    if not fund_code:
-        return error_response('缺少基金代码参数', status_code=400)
-    suggestion = ai_service.generate_fund_suggestion(fund_code)
-    return success_response(suggestion)
-
-# 账单分析接口
-@ai_bp.route('/api/bill-analysis', methods=['GET', 'POST'])
-@handle_exceptions
-def bill_analysis_api():
-    if request.method == 'GET':
-        user_id = request.args.get('userId')
-        if not user_id:
-            return error_response('缺少用户ID参数', status_code=400)
-        analysis = ai_service.generate_bill_suggestion({'userId': user_id})
-        return success_response(analysis)
-    else:  # POST方法
-        data = request.json or {}
-        user_id = data.get('userId')
-        bills = data.get('bills', [])
-        month = data.get('month')
-        
-        if not user_id:
-            return error_response('缺少用户ID参数', status_code=400)
+def register_ai_routes(app):
+    """注册AI相关的路由"""
+    
+    @app.route('/api/ai-assistant', methods=['POST'])
+    def ai_assistant():
+        """AI助手接口，处理通用AI对话"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': '请求数据不能为空'}), 400
             
-        # 使用bill_analysis_service处理账单数据
-        from services.bill_analysis_service import BillAnalysisService
-        analysis_service = BillAnalysisService()
-        analysis = analysis_service.analyze_bills(bills, month, user_id)
-        
-        return success_response(analysis)
-
-# 转账建议接口
-@ai_bp.route('/api/transfer-suggestion', methods=['GET'])
-@handle_exceptions
-def transfer_suggestion_api():
-    user_id = request.args.get('userId')
-    if not user_id:
-        return error_response('缺少用户ID参数', status_code=400)
-    suggestion = ai_service.generate_transfer_suggestion({'userId': user_id})
-    return success_response(suggestion)
-
-# 首页建议接口
-@ai_bp.route('/api/home-suggestion', methods=['GET'])
-@handle_exceptions
-def home_suggestion_api():
-    user_id = request.args.get('userId')
-    if not user_id:
-        return error_response('缺少用户ID参数', status_code=400)
-    suggestion = ai_service.generate_home_suggestion({'userId': user_id})
-    return success_response(suggestion)
+            prompt = data.get('prompt', '')
+            context = data.get('context', {})
+            
+            if not prompt:
+                return jsonify({'error': '提示词不能为空'}), 400
+            
+            # 使用通用AI服务生成回复
+            response = ai_service.generate_ai_response(prompt, context)
+            
+            return jsonify({
+                'success': True,
+                'response': response
+            })
+        except Exception as e:
+            print(f"AI助手处理失败: {str(e)}")
+            return jsonify({'error': 'AI助手处理失败，请稍后再试'}), 500
+    
+    @app.route('/api/ai/suggestion', methods=['POST'])
+    def get_ai_suggestions():
+        """获取页面特定的AI建议"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': '请求数据不能为空'}), 400
+            
+            page_type = data.get('pageType', '')
+            context = data.get('context', {})
+            
+            if not page_type:
+                return jsonify({'error': '页面类型不能为空'}), 400
+            
+            # 根据页面类型调用相应的服务
+            if page_type == 'home':
+                user_id = context.get('userId', '')
+                result = home_suggestion_service.generate_home_suggestion_from_context(context) if user_id else {"suggestion": "请提供用户ID"}
+            elif page_type == 'fund':
+                fund_data = context.get('fundData', {})
+                if not fund_data:
+                    result = {"suggestion": "请提供基金数据"}
+                else:
+                    result = fund_service.generate_fund_suggestion(fund_data)
+            elif page_type == 'bill':
+                try:
+                    result = bill_analysis_service.generate_bill_suggestion(context)
+                except Exception as e:
+                    print(f"账单AI建议生成失败，使用fallback: {str(e)}")
+                    # 账单分析fallback
+                    result = {"suggestion": "暂无账单数据，无法生成分析"}
+            elif page_type == 'transfer':
+                result = transfer_suggestion_service.generate_transfer_suggestion_from_context(context)
+            elif page_type == 'market':
+                # 市场分析暂时使用通用AI服务
+                market_data = context.get('marketData', {})
+                try:
+                    prompt = (
+                        f"当前市场趋势：{market_data.get('trend', '平稳')}\n"
+                        f"热门板块：{', '.join(market_data.get('hotSectors', []))}\n"
+                        "请给出简要的市场分析建议（100字以内，中文）"
+                    )
+                    suggestion = ai_service.generate_ai_response(prompt, context={"type": "market"})
+                    result = {"suggestion": suggestion}
+                except Exception as e:
+                    print(f"市场AI建议生成失败，使用fallback: {str(e)}")
+                    # 市场分析fallback
+                    result = {"suggestion": "当前市场整体表现平稳，建议投资者保持理性，关注优质蓝筹股和债券配置，控制风险。"}
+            else:
+                result = {"suggestion": "暂无相关建议"}
+            
+            return jsonify({
+                'success': True,
+                'data': result
+            })
+        except Exception as e:
+            print(f"获取AI建议失败: {str(e)}")
+            return jsonify({'error': '获取AI建议失败，请稍后再试'}), 500

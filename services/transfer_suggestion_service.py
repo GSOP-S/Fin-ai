@@ -65,6 +65,50 @@ class TransferSuggestionService:
             'feeSuggestion': fee_suggestion
         }
     
+    def generate_transfer_suggestion_from_context(self, context: Dict) -> Dict:
+        """
+        从上下文生成转账建议（与ai_service.py兼容）
+        
+        Args:
+            context: 包含转账信息的上下文
+        Returns:
+            转账建议
+        """
+        recipient_account = context.get('recipientAccount', '')
+        account_type = context.get('accountType', '')
+        is_first_time = context.get('isFirstTimeAccount', False)
+        amount = context.get('amount', 0)
+        
+        # 生成建议文本
+        suggestions = []
+        
+        # 风险提示
+        if is_first_time:
+            suggestions.append('⚠️ 首次向该账户转账，请仔细核对收款人信息')
+        
+        # 账户类型建议
+        if account_type == 'same_bank':
+            suggestions.append('✅ 本行账户转账实时到账，无手续费')
+        else:
+            suggestions.append('💡 跨行转账可能产生手续费')
+            suggestions.append('建议选择次日到账以节省手续费')
+        
+        # 金额建议
+        if amount > 50000:
+            suggestions.append('💰 大额转账建议分批操作，降低风险')
+        
+        suggestion_text = '\n'.join(suggestions) if suggestions else '建议核实收款人信息后转账'
+        
+        return {
+            'suggestion': suggestion_text,
+            'transferInfo': {
+                'recipientAccount': recipient_account,
+                'accountType': account_type,
+                'isFirstTimeAccount': is_first_time,
+                'amount': amount
+            }
+        }
+    
     def _get_recent_accounts_formatted(self, user_id: str) -> List[Dict]:
         """获取格式化的最近转账账户"""
         accounts = self.transfer_mapper.get_recent_accounts(user_id, limit=5)
