@@ -50,7 +50,7 @@ class ModelProvider:
         """根据 ``prompt`` 与 ``context`` 生成文本
 
         1. 当 ``provider`` = ``openai`` 且配置正确时调用 OpenAI ChatCompletion
-        2. 其余情况返回 mock 文本，避免后端报错
+        2. 其余情况抛出异常，让上层service处理fallback
         """
         if self.provider == "openai" and openai is not None and openai.api_key:
             try:
@@ -73,20 +73,21 @@ class ModelProvider:
                 print(f"[ModelProvider] OpenAI 调用失败: {exc}")
                 raise Exception("OpenAI API调用失败")
 
-        # 默认 mock 返回
-        return self._get_mock_response(prompt, context)
+        # 默认抛出异常，让上层service处理fallback
+        raise Exception("模型未配置或API调用失败")
     
-    def _get_mock_response(self, prompt: str, context: Dict[str, Any] | None = None) -> str:
-        """生成mock响应"""
-        # 根据不同的prompt类型返回不同的mock响应
-        if "市场" in prompt or "market" in prompt.lower():
-            return "当前市场整体表现平稳，建议投资者保持理性，关注优质蓝筹股和债券配置，控制风险。"
-        elif "基金" in prompt or "fund" in prompt.lower():
-            return "基金投资需谨慎，建议根据自身风险承受能力选择合适的基金产品，分散投资降低风险。"
-        elif "账单" in prompt or "bill" in prompt.lower():
-            return "建议您定期查看账单明细，合理控制支出，提高储蓄率，建立良好的消费习惯。"
-        elif "转账" in prompt or "transfer" in prompt.lower():
-            return "转账时请仔细核对收款人信息，大额转账建议分批进行，确保资金安全。"
-        else:
-            ellipsis_prompt = prompt[:20] + ("..." if len(prompt) > 20 else "")
-            return f"[MOCK_MODEL_REPLY] prompt={ellipsis_prompt} context={context}"
+    # 暂时注释掉mock响应方法，改由各服务层处理fallback逻辑
+    # def _get_mock_response(self, prompt: str, context: Dict[str, Any] | None = None) -> str:
+    #     """生成mock响应"""
+    #     # 根据不同的prompt类型返回不同的mock响应
+    #     if "市场" in prompt or "market" in prompt.lower():
+    #         return "当前市场整体表现平稳，建议投资者保持理性，关注优质蓝筹股和债券配置，控制风险。"
+    #     elif "基金" in prompt or "fund" in prompt.lower():
+    #         return "基金投资需谨慎，建议根据自身风险承受能力选择合适的基金产品，分散投资降低风险。"
+    #     elif "账单" in prompt or "bill" in prompt.lower():
+    #         return "建议您定期查看账单明细，合理控制支出，提高储蓄率，建立良好的消费习惯。"
+    #     elif "转账" in prompt or "transfer" in prompt.lower():
+    #         return "转账时请仔细核对收款人信息，大额转账建议分批进行，确保资金安全。"
+    #     else:
+    #         ellipsis_prompt = prompt[:20] + ("..." if len(prompt) > 20 else "")
+    #         return f"[MOCK_MODEL_REPLY] prompt={ellipsis_prompt} context={context}"

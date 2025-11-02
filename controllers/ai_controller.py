@@ -70,7 +70,18 @@ def register_ai_routes(app):
                 if not fund_data:
                     result = {"suggestion": "请提供基金数据"}
                 else:
-                    result = fund_service.generate_fund_suggestion(fund_data)
+                    # 转换前端传来的fundData为后端期望的格式
+                    fund = {
+                        'name': fund_data.get('fundName', ''),
+                        'code': fund_data.get('fundCode', ''),
+                        'category': fund_data.get('fundType', ''),
+                        'risk': fund_data.get('riskLevel', ''),
+                        'nav': fund_data.get('nav', 0),
+                        'change': fund_data.get('change', ''),
+                        'changePercent': fund_data.get('changePercent', ''),
+                        'manager': fund_data.get('manager', '未知基金经理')
+                    }
+                    result = fund_service.generate_fund_suggestion(fund)
             elif page_type == 'bill':
                 try:
                     result = bill_analysis_service.generate_bill_suggestion(context)
@@ -81,20 +92,9 @@ def register_ai_routes(app):
             elif page_type == 'transfer':
                 result = transfer_suggestion_service.generate_transfer_suggestion_from_context(context)
             elif page_type == 'market':
-                # 市场分析暂时使用通用AI服务
-                market_data = context.get('marketData', {})
-                try:
-                    prompt = (
-                        f"当前市场趋势：{market_data.get('trend', '平稳')}\n"
-                        f"热门板块：{', '.join(market_data.get('hotSectors', []))}\n"
-                        "请给出简要的市场分析建议（100字以内，中文）"
-                    )
-                    suggestion = ai_service.generate_ai_response(prompt, context={"type": "market"})
-                    result = {"suggestion": suggestion}
-                except Exception as e:
-                    print(f"市场AI建议生成失败，使用fallback: {str(e)}")
-                    # 市场分析fallback
-                    result = {"suggestion": "当前市场整体表现平稳，建议投资者保持理性，关注优质蓝筹股和债券配置，控制风险。"}
+                # 市场分析使用专门的服务
+                from services.market_analysis_service import market_analysis_service  # 延迟导入避免循环
+                result = market_analysis_service.generate_market_suggestion_from_context(context)
             else:
                 result = {"suggestion": "暂无相关建议"}
             

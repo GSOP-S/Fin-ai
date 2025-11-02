@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './FundList.css';
-import { fetchFundList } from '../api/fund';
+import { fetchFundList, getCachedFundSuggestion } from '../api/fund';
 
 const FundList = ({ onSelectFund }) => {
   const [selectedFund, setSelectedFund] = useState(null);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fundSuggestions, setFundSuggestions] = useState({}); // 存储基金建议缓存
   
   // 分页和筛选状态
   const [pagination, setPagination] = useState({
@@ -25,6 +26,27 @@ const FundList = ({ onSelectFund }) => {
   });
 
 
+  // 预加载基金建议
+  const preloadFundSuggestions = async (fundsList) => {
+    if (!fundsList || fundsList.length === 0) return;
+    
+    // 只预加载前5个基金的建议，避免过多请求
+    const fundsToPreload = fundsList.slice(0, 5);
+    
+    // 并行请求，但不等待所有完成
+    fundsToPreload.forEach(async (fund) => {
+      try {
+        const result = await getCachedFundSuggestion(fund);
+        if (result.success && result.data && result.data.suggestion) {
+          // 更新状态，但不阻塞UI
+          setFundSuggestions(prev => ({ ...prev, [fund.code]: result.data.suggestion }));
+        }
+      } catch (error) {
+        console.error(`预加载基金${fund.code}建议失败:`, error);
+      }
+    });
+  };
+  
   // 从后端获取基金数据 - 支持分页、筛选和排序
   const fetchFunds = async (page = 1, filterOptions = filters) => {
     setLoading(true);
@@ -48,6 +70,11 @@ const FundList = ({ onSelectFund }) => {
         // 确保 funds 是数组 - 后端返回的是 data.data
         setFunds(Array.isArray(result.data.data) ? result.data.data : []);
         console.log("获取到基金数据:", result.data);
+        
+        // 预加载基金建议
+        if (Array.isArray(result.data.data) && result.data.data.length > 0) {
+          preloadFundSuggestions(result.data.data);
+        }
       } else {
         setFunds([]);
         throw new Error(result.message || '获取基金数据失败');
@@ -77,6 +104,19 @@ const FundList = ({ onSelectFund }) => {
 
   const handleFundClick = (fund) => {
     setSelectedFund(fund);
+    
+    // 如果有预加载的建议，立即显示
+    if (fundSuggestions[fund.code]) {
+      console.log(`使用预加载的基金建议: ${fund.code}`);
+    } else {
+      // 如果没有预加载的建议，立即开始获取
+      getCachedFundSuggestion(fund).then(result => {
+        if (result.success && result.data && result.data.suggestion) {
+          setFundSuggestions(prev => ({ ...prev, [fund.code]: result.data.suggestion }));
+        }
+      });
+    }
+    
     // 如果传入了onSelectFund回调，则调用它
     if (onSelectFund) {
       onSelectFund(fund);

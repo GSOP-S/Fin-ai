@@ -78,21 +78,30 @@ class FundService:
         # 先生成本地建议作为兜底
         fallback_suggestion = _fallback_fund_suggestion(fund)
         
-        try:
-            from services.model_provider import ModelProvider
-            model = ModelProvider()
-            prompt = (
-                "请根据以下基金信息，给出简洁的投资建议（100字以内，中文）：\n"
-                f"基金名称：{fund.get('name','')}\n"
-                f"基金代码：{fund.get('code','')}\n"
-                f"涨跌幅：{fund.get('changePercent','')}\n"
-                f"基金经理：{fund.get('manager','')}\n"
-                f"风险等级：{fund.get('risk','')}"
-            )
-            suggestion_text = model.generate(prompt, context={"type": "fund"})
-            # 如果AI调用成功，返回AI结果；否则返回兜底结果
-            return {'suggestion': suggestion_text if suggestion_text else fallback_suggestion, 'fund': fund}
-        except Exception as exc:
-            print(f"[FundService] AI 调用失败: {exc}")
-            # 兜底逻辑
-            return {'suggestion': fallback_suggestion, 'fund': fund}
+        # 立即返回兜底建议，不等待AI调用
+        import threading
+        
+        def call_ai_async():
+            try:
+                from services.model_provider import ModelProvider  # 延迟导入避免循环
+                model = ModelProvider()
+                prompt = (
+                    "请根据以下基金信息，给出简洁的投资建议（100字以内，中文）：\n"
+                    f"基金名称：{fund.get('name','')}\n"
+                    f"基金代码：{fund.get('code','')}\n"
+                    f"涨跌幅：{fund.get('changePercent','')}\n"
+                    f"基金经理：{fund.get('manager','')}\n"
+                    f"风险等级：{fund.get('risk','')}"
+                )
+                suggestion_text = model.generate(prompt, context={"type": "fund"})
+                # 这里可以更新缓存，但不影响已返回的兜底建议
+                print(f"[FundService] AI建议已生成: {suggestion_text[:50]}...")
+            except Exception as exc:
+                print(f"[FundService] AI 调用失败: {exc}")
+        
+        # 启动后台线程调用AI，不阻塞主流程
+        ai_thread = threading.Thread(target=call_ai_async, daemon=True)
+        ai_thread.start()
+        
+        # 立即返回兜底建议
+        return {'suggestion': fallback_suggestion, 'fund': fund}

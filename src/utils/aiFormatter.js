@@ -101,10 +101,19 @@ function formatTransferSuggestion(result) {
  * 格式化基金建议
  */
 function formatFundSuggestion(result) {
+  // 优先使用已格式化的建议文本
+  if (result.suggestion) {
+    return result.suggestion;
+  }
+  
+  // 如果有基金信息，尝试构建基本建议
   if (result.fund) {
     const { name, code, changePercent } = result.fund;
-    return result.suggestion || `${name}(${code}) 当前涨跌：${changePercent}`;
+    if (name && code) {
+      return changePercent ? `${name}(${code}) 当前涨跌：${changePercent}` : `${name}(${code})`;
+    }
   }
+  
   return result.suggestion || '暂无基金建议';
 }
 

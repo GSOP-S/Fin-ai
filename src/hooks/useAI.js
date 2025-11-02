@@ -60,6 +60,54 @@ export function useAI(options = {}) {
         config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
       }
       
+      // 对于基金页面，如果有预加载的建议，直接使用
+      if (pageType === 'fund' && context.fundData && context.fundData.fundCode) {
+        // 检查是否有预加载的建议
+        try {
+          // 尝试从全局缓存获取建议
+          const { getCachedFundSuggestion } = await import('../api/fund');
+          const fund = {
+            code: context.fundData.fundCode,
+            name: context.fundData.fundName,
+            category: context.fundData.fundType,
+            risk: context.fundData.riskLevel,
+            nav: context.fundData.nav,
+            change: context.fundData.change,
+            changePercent: context.fundData.changePercent
+          };
+          
+          const cachedResult = await getCachedFundSuggestion(fund);
+          if (cachedResult.success && cachedResult.data && cachedResult.data.suggestion) {
+            console.log(`[AI] 使用缓存的基金建议: ${context.fundData.fundCode}`);
+            const text = cachedResult.data.suggestion;
+            setSuggestion(cachedResult.data);
+            setSuggestionText(text);
+            
+            if (config.autoShow) {
+              setIsVisible(true);
+              if (config.autoHideDelay > 0) {
+                hideTimerRef.current = setTimeout(() => {
+                  setIsVisible(false);
+                }, config.autoHideDelay);
+              }
+            }
+            
+            if (config.speakEnabled && text) {
+              try {
+                speak(text);
+              } catch (speechError) {
+                console.error('语音播报调用失败:', speechError);
+              }
+            }
+            
+            setIsLoading(false);
+            return cachedResult.data;
+          }
+        } catch (cacheError) {
+          console.error('获取缓存基金建议失败:', cacheError);
+        }
+      }
+      
       // 调用API
       console.log(`[AI] 调用API: pageType=${pageType}`);
       // 确保用户信息被正确传递
@@ -115,24 +163,7 @@ export function useAI(options = {}) {
     } catch (err) {
       console.error('AI建议获取失败:', err);
       setError(err.message);
-      
-      // 显示错误提示，使用备用建议
-      const fallbackSuggestions = {
-        home: '欢迎使用智能银行系统！建议您定期查看账户明细，合理规划理财投资。',
-        fund: '基金投资有风险，建议根据自身风险承受能力选择合适的基金产品。',
-        bill: '建议您定期查看账单明细，合理控制支出，提高储蓄率。',
-        transfer: '转账时请仔细核对收款人信息，大额转账建议分批进行。',
-        market: '市场有风险，投资需谨慎。建议分散投资，降低风险。',
-      };
-      
-      // 使用页面类型对应的备用建议，如果没有则使用通用建议
-      const pageType = err.pageType || 'default';
-      const fallbackText = fallbackSuggestions[pageType] || '暂无相关建议，请稍后再试。';
-      
-      setSuggestionText(fallbackText);
-      setIsVisible(true);
-      
-      return null;
+      throw err; // 重新抛出错误，让调用方处理
     } finally {
       setIsLoading(false);
     }
