@@ -7,6 +7,7 @@ import FundList from './components/FundList';
 import HomePage from './components/HomePage';
 import TransferPage from './components/TransferPage';
 import BillDetail from './components/BillDetail';
+import NewsPage from './components/NewsPage';
 import { generateAIResponse, generateAISuggestion } from './api/ai';
 import { submitFeedback } from './api/feedback';
 import { showFundSuggestion } from './api/fund';
@@ -142,6 +143,9 @@ function App() {
           </div>
         );
       
+      case 'news':
+        return <NewsPage onNavigate={handleNavigate} />;
+      
       default:
         // 其他页面暂时返回提示信息
         return (
@@ -167,7 +171,8 @@ function App() {
       'loan': '贷款服务',
       'scan': '扫一扫',
       'withdraw': '取款',
-      'more': '更多服务'
+      'more': '更多服务',
+      'news': '金融资讯'
     };
     return titles[page] || '功能页面';
   };
@@ -294,8 +299,8 @@ function App() {
         {renderContent()}
       </main>
       
-      {/* 底部导航栏，仅在首页和理财页显示 */}
-      {(currentPage === 'home' || currentPage === 'financing') && !selectedFund && (
+      {/* 底部导航栏 */}
+      {(currentPage === 'home' || currentPage === 'financing' || currentPage === 'news') && !selectedFund && (
         <nav className="bottom-nav">
           <button 
             className={`nav-item ${currentPage === 'home' ? 'active' : ''}`}
@@ -319,11 +324,11 @@ function App() {
             <span className="nav-text">理财</span>
           </button>
           <button 
-            className={`nav-item ${currentPage === 'more' ? 'active' : ''}`}
-            onClick={() => handleNavigate('more')}
+            className={`nav-item ${currentPage === 'news' ? 'active' : ''}`}
+            onClick={() => handleNavigate('news')}
           >
-            <span className="nav-icon">⋮⋮</span>
-            <span className="nav-text">更多</span>
+            <span className="nav-icon">📰</span>
+            <span className="nav-text">资讯</span>
           </button>
         </nav>
       )}

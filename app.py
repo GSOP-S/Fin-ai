@@ -16,10 +16,17 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 
-# 配置CORS
+# 配置CORS - 允许常用的开发端口
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000", "http://localhost:5173"],
+        "origins": [
+            "http://localhost:3000",
+            "http://localhost:3001", 
+            "http://localhost:3002",
+            "http://localhost:3003",
+            "http://localhost:3004",
+            "http://localhost:5173"
+        ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True
@@ -33,6 +40,7 @@ from controllers.home_controller import home_bp
 from controllers.user_controller import user_bp
 from controllers.ai_interaction import ai_interaction_bp
 from controllers.fund_controller import fund_bp
+from controllers.news_controller import news_bp
 
 app.register_blueprint(bill_bp)
 app.register_blueprint(transfer_bp)
@@ -40,6 +48,7 @@ app.register_blueprint(home_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(ai_interaction_bp)
 app.register_blueprint(fund_bp)
+app.register_blueprint(news_bp)
 
 # 注册AI路由（使用新的注册方式）
 from controllers.ai_controller import register_ai_routes

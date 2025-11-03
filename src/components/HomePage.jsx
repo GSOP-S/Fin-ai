@@ -6,131 +6,100 @@ function HomePage({ onNavigate, user }) {
   const accountInfo = {
     balance: '128,563.45',
     accountNumber: '6222 **** **** 5678',
-    userName: '张三',
-    lastLogin: '2025-10-15 09:30:25'
+    userName: user?.displayName || '张三',
+    todayIncome: '12.35'
   };
 
-  // 快捷功能按钮配置
+  // 顶部快捷操作（4个）
   const quickActions = [
     {
       id: 'account',
-      title: '账户明细',
+      title: '账户',
       icon: '📊',
-      description: '查看近期交易记录',
       onClick: () => onNavigate('account')
     },
     {
       id: 'transfer',
-      title: '转账汇款',
+      title: '转账',
       icon: '💸',
-      description: '快速转账到他人账户',
       onClick: () => onNavigate('transfer')
     },
     {
       id: 'financing',
-      title: '投资理财',
+      title: '理财',
       icon: '💰',
-      description: '基金等金融产品',
       onClick: () => onNavigate('financing')
-    },
-    {
-      id: 'deposit',
-      title: '定期存款',
-      icon: '🏦',
-      description: '稳健理财新选择',
-      onClick: () => onNavigate('deposit')
-    },
-    {
-      id: 'creditCard',
-      title: '信用卡',
-      icon: '💳',
-      description: '信用卡账单与还款',
-      onClick: () => onNavigate('creditCard')
-    },
-    {
-      id: 'insurance',
-      title: '保险服务',
-      icon: '🛡️',
-      description: '人生保障全面覆盖',
-      onClick: () => onNavigate('insurance')
-    },
-    {
-      id: 'loan',
-      title: '贷款服务',
-      icon: '🏠',
-      description: '房贷、车贷等贷款产品',
-      onClick: () => onNavigate('loan')
     },
     {
       id: 'more',
       title: '更多服务',
       icon: '⋮⋮',
-      description: '其他银行服务',
       onClick: () => onNavigate('more')
+    }
+  ];
+
+  // 热门资讯预览（3条）
+  const hotNews = [
+    {
+      id: 1,
+      category: '财经要闻',
+      title: '央行降准0.5个百分点，释放长期资金约1万亿元',
+      time: '2小时前'
+    },
+    {
+      id: 2,
+      category: '市场动态',
+      title: 'A股三大指数集体收涨，科技股表现强势',
+      time: '4小时前'
+    },
+    {
+      id: 3,
+      category: '政策解读',
+      title: '新版金融监管政策出台，助力实体经济发展',
+      time: '6小时前'
     }
   ];
 
   return (
     <div className="homepage">
-      {/* 顶部账户信息卡片 */}
-      <div className="account-card">
-        <div className="account-header">
-          <h2>我的账户</h2>
-          <span className="account-number">{accountInfo.accountNumber}</span>
+      {/* 顶部蓝色渐变区域 */}
+      <div className="homepage-header">
+        <div className="user-greeting">
+          <div className="greeting-text">
+            <span className="greeting-time">下午好</span>
+            <span className="user-name">{accountInfo.userName}</span>
+          </div>
+          <div className="header-icons">
+            <span className="icon-btn">🔍</span>
+            <span className="icon-btn">🔔</span>
+          </div>
         </div>
-        <div className="account-balance">
-          ¥ {accountInfo.balance}
-        </div>
-        <div className="account-actions">
-          <button className="action-btn" onClick={() => onNavigate('transfer')}>
-            转账
-          </button>
-          <button className="action-btn" onClick={() => onNavigate('scan')}>
-            扫码
-          </button>
-          <button className="action-btn" onClick={() => onNavigate('withdraw')}>
-            取款
-          </button>
-          <button className="action-btn" onClick={() => onNavigate('deposit')}>
-            存款
-          </button>
-        </div>
-      </div>
 
-      {/* 快捷功能区 */}
-      <div className="quick-actions">
-        <h3>快捷功能</h3>
-        <div className="action-grid">
+        {/* 快捷操作图标区 */}
+        <div className="quick-icons">
           {quickActions.map((action) => (
             <div 
               key={action.id} 
-              className="action-item"
+              className="quick-icon-item"
               onClick={action.onClick}
             >
-              <div className="action-icon">{action.icon}</div>
-              <div className="action-title">{action.title}</div>
-              <div className="action-description">{action.description}</div>
+              <div className="quick-icon">{action.icon}</div>
+              <div className="quick-title">{action.title}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* 金融资讯区 */}
-      <div className="financial-news">
-        <h3>金融资讯</h3>
-        <div className="news-list">
-          <div className="news-item">
-            <span className="news-tag">财经要闻</span>
-            <span className="news-title">央行降准0.5个百分点，释放长期资金约1万亿元</span>
-          </div>
-          <div className="news-item">
-            <span className="news-tag">市场动态</span>
-            <span className="news-title">A股三大指数集体收涨，科技股表现强势</span>
-          </div>
-          <div className="news-item">
-            <span className="news-tag">银行公告</span>
-            <span className="news-title">本行新版手机银行上线，优化用户体验</span>
-          </div>
+      {/* 账户余额卡片 */}
+      <div className="balance-card">
+        <div className="balance-header">
+          <span className="balance-label">总资产</span>
+          <span className="balance-eye">👁</span>
+        </div>
+        <div className="balance-amount">¥{accountInfo.balance}</div>
+        <div className="balance-detail">
+          <span className="detail-item">累计收益 0.00</span>
+          <span className="detail-item">昨日收益 {accountInfo.todayIncome}</span>
         </div>
       </div>
 
@@ -139,29 +108,57 @@ function HomePage({ onNavigate, user }) {
         <div className="section-header">
           <h3>推荐理财</h3>
           <button className="view-all-btn" onClick={() => onNavigate('financing')}>
-            查看全部
+            查看全部 →
           </button>
         </div>
-        <div className="product-cards">
+        <div className="product-list">
           <div 
             className="product-card" 
             onClick={() => {
               onNavigate('financing');
-              // 延迟设置子标签，确保导航完成
               setTimeout(() => window.financingTab = 'funds', 100);
             }}
           >
-            <div className="product-icon">📊</div>
-            <div className="product-info">
-              <h4>基金精选</h4>
+            <div className="product-header">
+              <span className="product-icon">📊</span>
+              <span className="product-name">基金精选</span>
             </div>
+            <div className="product-rate">4.85%</div>
+            <div className="product-desc">近七日年化</div>
           </div>
           <div className="product-card" onClick={() => onNavigate('deposit')}>
-            <div className="product-icon">🏦</div>
-            <div className="product-info">
-              <h4>定期存款</h4>
+            <div className="product-header">
+              <span className="product-icon">🏦</span>
+              <span className="product-name">定期存款</span>
             </div>
+            <div className="product-rate">3.25%</div>
+            <div className="product-desc">年化收益</div>
           </div>
+        </div>
+      </div>
+
+      {/* 热门资讯预览 */}
+      <div className="news-preview">
+        <div className="section-header">
+          <h3>热门资讯</h3>
+          <button className="view-all-btn" onClick={() => onNavigate('news')}>
+            更多 →
+          </button>
+        </div>
+        <div className="news-list">
+          {hotNews.map((news) => (
+            <div 
+              key={news.id} 
+              className="news-item"
+              onClick={() => onNavigate('news')}
+            >
+              <div className="news-content">
+                <span className="news-tag">{news.category}</span>
+                <span className="news-title">{news.title}</span>
+              </div>
+              <span className="news-time">{news.time}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
