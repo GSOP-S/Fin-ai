@@ -1,13 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './NewsPage.css';
 import { getNewsList } from '../api/news';
+import { usePageTracking } from '../hooks/usePageTracking';
+import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
+import { EventTypes } from '../config/tracking.config';
 
 function NewsPage({ onNavigate }) {
+  // ===== 行为追踪 =====
+  const tracker = useBehaviorTracker();
+  usePageTracking('news');
+  
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentCategory, setCurrentCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredNews, setFilteredNews] = useState([]);
+  
+  // 用于防抖搜索追踪
+  const searchTimeoutRef = useRef(null);
 
   // 分类配置
   const categories = [
@@ -62,7 +72,23 @@ function NewsPage({ onNavigate }) {
   };
 
   const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    // 防抖追踪搜索操作（500ms后才追踪）
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      if (query.trim()) {
+        tracker.track(EventTypes.NEWS_SEARCH, {
+          search_query: query,
+          search_length: query.length,
+          current_category: currentCategory,
+        });
+      }
+    }, 500);
   };
 
   const formatTime = (timeStr) => {
@@ -118,7 +144,14 @@ function NewsPage({ onNavigate }) {
           <button
             key={cat.id}
             className={`category-btn ${currentCategory === cat.id ? 'active' : ''}`}
-            onClick={() => setCurrentCategory(cat.id)}
+            onClick={() => {
+              tracker.track(EventTypes.NEWS_CATEGORY, {
+                from_category: currentCategory,
+                to_category: cat.id,
+                category_name: cat.name,
+              });
+              setCurrentCategory(cat.id);
+            }}
           >
             {cat.name}
           </button>
@@ -143,6 +176,20 @@ function NewsPage({ onNavigate }) {
               <div 
                 key={news.id} 
                 className="news-card"
+                onClick={() => {
+                  // 追踪阅读资讯（重点追踪 - 实时上报）
+                  tracker.track(EventTypes.NEWS_READ, {
+                    news_id: news.id,
+                    news_title: news.title,
+                    news_category: news.category,
+                    news_source: news.source,
+                    news_author: news.author,
+                    read_count: news.read_count,
+                    has_image: !!news.image_url,
+                    current_search_query: searchQuery,
+                    current_category: currentCategory,
+                  }, { realtime: true }); // 实时上报
+                }}
               >
                 {news.image_url && (
                   <div className="news-image">

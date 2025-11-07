@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './FundList.css';
 import { fetchFundList, getCachedFundSuggestion } from '../api/fund';
+import { usePageTracking } from '../hooks/usePageTracking';
+import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
+import { EventTypes } from '../config/tracking.config';
 
 const FundList = ({ onSelectFund }) => {
+  // ===== 行为追踪 =====
+  const tracker = useBehaviorTracker();
+  usePageTracking('financing', { section: 'fund_list' });
+  
   const [selectedFund, setSelectedFund] = useState(null);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,16 +100,45 @@ const FundList = ({ onSelectFund }) => {
   
   // 处理筛选和排序变化
   const handleFilterChange = (newFilters) => {
+    // 追踪筛选操作
+    tracker.track(EventTypes.FUND_FILTER, {
+      filter_type: 'category_or_risk_or_sort',
+      category: newFilters.category,
+      risk_level: newFilters.riskLevel,
+      order_by: newFilters.orderBy,
+      order_dir: newFilters.orderDir,
+    });
+    
     setFilters(newFilters);
     fetchFunds(1, newFilters);
   };
   
   // 处理页码变化
   const handlePageChange = (page) => {
+    // 追踪分页操作
+    tracker.track(EventTypes.CLICK, {
+      element_id: 'fund-pagination',
+      action: 'page_change',
+      from_page: pagination.currentPage,
+      to_page: page,
+    });
+    
     fetchFunds(page);
   };
 
   const handleFundClick = (fund) => {
+    // 追踪查看基金详情（重点追踪 - 实时上报）
+    tracker.track(EventTypes.FUND_VIEW, {
+      fund_code: fund.code,
+      fund_name: fund.name,
+      fund_category: fund.category,
+      fund_nav: fund.nav,
+      fund_change: fund.change,
+      fund_change_percent: fund.changePercent,
+      fund_risk: fund.risk,
+      has_preloaded_suggestion: !!fundSuggestions[fund.code],
+    }, { realtime: true }); // 实时上报
+    
     setSelectedFund(fund);
     
     // 如果有预加载的建议，立即显示

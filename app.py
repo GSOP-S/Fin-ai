@@ -41,6 +41,7 @@ from controllers.user_controller import user_bp
 from controllers.ai_interaction import ai_interaction_bp
 from controllers.fund_controller import fund_bp
 from controllers.news_controller import news_bp
+from controllers.behavior_controller import behavior_bp
 
 app.register_blueprint(bill_bp)
 app.register_blueprint(transfer_bp)
@@ -49,6 +50,7 @@ app.register_blueprint(user_bp)
 app.register_blueprint(ai_interaction_bp)
 app.register_blueprint(fund_bp)
 app.register_blueprint(news_bp)
+app.register_blueprint(behavior_bp)
 
 # 注册AI路由（使用新的注册方式）
 from controllers.ai_controller import register_ai_routes

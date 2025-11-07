@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUserBills, fetchBillAnalysis } from '../api/bill';
 import './BillDetail.css';
+import { usePageTracking } from '../hooks/usePageTracking';
+import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
+import { EventTypes } from '../config/tracking.config';
 
 const BillDetail = ({ onNavigate, onShowAI }) => {
+  // ===== 行为追踪 =====
+  const tracker = useBehaviorTracker();
+  usePageTracking('account', { section: 'bill_detail' });
+  
   // 状态管理
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +135,16 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
           <button onClick={() => {
             const date = new Date(selectedMonth);
             date.setMonth(date.getMonth() - 1);
-            setSelectedMonth(date.toISOString().slice(0, 7));
+            const newMonth = date.toISOString().slice(0, 7);
+            
+            // 追踪月份筛选
+            tracker.track(EventTypes.BILL_FILTER, {
+              filter_type: 'month',
+              from_month: selectedMonth,
+              to_month: newMonth,
+            });
+            
+            setSelectedMonth(newMonth);
           }}>&lt;</button>
           <span>{selectedMonth}</span>
           <button onClick={() => {
@@ -136,7 +152,16 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
             const currentMonth = new Date().toISOString().slice(0, 7);
             if (selectedMonth < currentMonth) {
               date.setMonth(date.getMonth() + 1);
-              setSelectedMonth(date.toISOString().slice(0, 7));
+              const newMonth = date.toISOString().slice(0, 7);
+              
+              // 追踪月份筛选
+              tracker.track(EventTypes.BILL_FILTER, {
+                filter_type: 'month',
+                from_month: selectedMonth,
+                to_month: newMonth,
+              });
+              
+              setSelectedMonth(newMonth);
             }
           }}>&gt;</button>
         </div>
@@ -201,7 +226,21 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
             </div>
           ) : (
             bills.map(bill => (
-              <div key={bill.id} className="bill-item">
+              <div 
+                key={bill.id} 
+                className="bill-item"
+                onClick={() => {
+                  // 追踪查看账单详情
+                  tracker.track(EventTypes.BILL_VIEW, {
+                    bill_id: bill.id,
+                    bill_merchant: bill.merchant,
+                    bill_category: bill.category,
+                    bill_amount: bill.amount,
+                    bill_date: bill.date,
+                    selected_month: selectedMonth,
+                  });
+                }}
+              >
                 <div className="bill-icon">
                   {bill.category === '餐饮' && '🍽️'}
                   {bill.category === '购物' && '🛒'}

@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import './TransferPage.css';
+import { usePageTracking } from '../hooks/usePageTracking';
+import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
+import { EventTypes } from '../config/tracking.config';
 
 function TransferPage({ onNavigate, onShowAI }) {
+  // ===== 行为追踪 =====
+  const tracker = useBehaviorTracker();
+  usePageTracking('transfer');
+  
   // 状态管理
   const [recipientAccount, setRecipientAccount] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -52,6 +59,15 @@ function TransferPage({ onNavigate, onShowAI }) {
     setAccountType(detectedAccountType);
     setIsFirstTimeAccount(isFirstTime);
     
+    // 追踪收款账户选择（卡号会自动脱敏）
+    if (value.length >= 10) {
+      tracker.track(EventTypes.TRANSFER_SELECT, {
+        cardNumber: value, // 会被自动脱敏（保留前4后4）
+        account_type: detectedAccountType,
+        is_first_time: isFirstTime,
+      });
+    }
+    
     // 当输入完整账号后，触发AI建议
     if (value.length >= 10 && onShowAI) {
       // 准备传递给后端AI服务的数据
@@ -98,9 +114,44 @@ function TransferPage({ onNavigate, onShowAI }) {
     });
   };
 
+  // 处理金额输入
+  const handleAmountChange = (e) => {
+    const amount = e.target.value;
+    setTransferAmount(amount);
+    
+    // 追踪金额输入（完全采集）
+    if (amount) {
+      tracker.track(EventTypes.TRANSFER_INPUT, {
+        transfer_amount: parseFloat(amount) || 0, // 完全采集金额
+        amount_range: getAmountRange(amount),
+        has_recipient: !!recipientAccount,
+      });
+    }
+  };
+  
+  // 金额范围分类（用于分析）
+  const getAmountRange = (amount) => {
+    const num = parseFloat(amount) || 0;
+    if (num < 100) return '0-100';
+    if (num < 1000) return '100-1000';
+    if (num < 10000) return '1000-10000';
+    if (num < 100000) return '10000-100000';
+    return '100000+';
+  };
+  
   // 处理转账提交
   const handleTransferSubmit = (e) => {
     e.preventDefault();
+    
+    // 追踪转账提交（实时上报）
+    tracker.track(EventTypes.TRANSFER_SUBMIT, {
+      cardNumber: recipientAccount, // 会被自动脱敏
+      transfer_amount: parseFloat(transferAmount) || 0, // 完全采集
+      amount_range: getAmountRange(transferAmount),
+      account_type: accountType,
+      is_first_time: isFirstTimeAccount,
+    }, { realtime: true }); // 实时上报
+    
     // 转账逻辑处理
     alert(`转账成功：${transferAmount}元 至 ${recipientAccount}`);
     onNavigate('home');
@@ -154,13 +205,18 @@ function TransferPage({ onNavigate, onShowAI }) {
           <input
             type="number"
             value={transferAmount}
-            onChange={(e) => setTransferAmount(e.target.value)}
+            onChange={handleAmountChange}
             placeholder="请输入转账金额"
             className="transfer-amount-input"
           />
         </div>
 
-        <button className="transfer-submit-btn">确认转账</button>
+        <button 
+          className="transfer-submit-btn"
+          onClick={handleTransferSubmit}
+        >
+          确认转账
+        </button>
       </div>
     </div>
   );
