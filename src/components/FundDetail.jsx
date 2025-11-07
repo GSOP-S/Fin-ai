@@ -15,17 +15,40 @@ const FundDetail = ({ fund, onBack }) => {
   
   // ===== Mock数据生成 =====
   
-  // 生成历史净值数据
+  // 生成历史净值数据（符合真实涨跌幅和成立以来收益）
   const generateNavHistory = () => {
     const data = [];
-    const baseNav = parseFloat(fund.nav) || 1.0000;
-    const days = 180; // 6个月数据
     
-    for (let i = days; i >= 0; i--) {
+    // 当前基金数据
+    const currentNav = parseFloat(fund.nav) || 2.8745;
+    const dailyChangePercent = parseFloat(fund.changePercent?.replace('%', '').replace('+', '')) || 2.13;
+    
+    // 成立以来+300%，意味着初始净值 = currentNav / (1 + 3.00) ≈ 0.72
+    const initialNav = currentNav / 4.0; // +300% = 4倍
+    const totalDays = 1200; // 假设成立约3.3年
+    
+    // 计算平均每日增长率（复利）
+    const avgDailyGrowth = Math.pow(currentNav / initialNav, 1 / totalDays) - 1;
+    
+    // 生成历史数据
+    for (let i = totalDays; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const randomChange = (Math.random() - 0.48) * 0.02; // 模拟波动
-      const nav = baseNav * (1 + randomChange * (days - i) / days);
+      
+      // 基础增长趋势
+      const trendNav = initialNav * Math.pow(1 + avgDailyGrowth, totalDays - i);
+      
+      // 添加随机波动（±2%）
+      const volatility = 0.02;
+      const randomFactor = 1 + (Math.random() - 0.5) * volatility;
+      
+      // 最终净值
+      let nav = trendNav * randomFactor;
+      
+      // 确保最后一天的净值等于当前净值
+      if (i === 0) {
+        nav = currentNav;
+      }
       
       data.push({
         date: date.toISOString().slice(0, 10),
@@ -33,10 +56,11 @@ const FundDetail = ({ fund, onBack }) => {
         displayDate: `${date.getMonth() + 1}/${date.getDate()}`
       });
     }
+    
     return data;
   };
   
-  const navHistory = useMemo(() => generateNavHistory(), [fund.code]);
+  const navHistory = useMemo(() => generateNavHistory(), [fund.code, fund.nav, fund.changePercent]);
   
   // 根据周期过滤数据
   const filteredData = useMemo(() => {
@@ -54,13 +78,53 @@ const FundDetail = ({ fund, onBack }) => {
     }
   }, [navHistory, selectedPeriod]);
   
-  // Mock历史业绩数据
-  const performance = {
-    '近1月': fund.changePercent || '+3.21%',
-    '近3月': '+8.45%',
-    '近6月': '+15.32%',
-    '成立来': '+37.94%'
+  // 计算昨日净值（确保数学关系正确）
+  const calculateYesterdayNav = () => {
+    const currentNav = parseFloat(fund.nav) || 2.8745;
+    const dailyChange = parseFloat(fund.change?.replace('+', '')) || 0.0598;
+    return (currentNav - dailyChange).toFixed(4);
   };
+  
+  const yesterdayNav = calculateYesterdayNav();
+  
+  // 自动计算历史业绩（基于生成的历史数据）
+  const calculatePerformance = () => {
+    if (navHistory.length < 30) {
+      return {
+        '近1月': fund.changePercent || '+3.21%',
+        '近3月': '+8.45%',
+        '近6月': '+15.32%',
+        '成立来': '+300.00%'
+      };
+    }
+    
+    const currentNav = navHistory[navHistory.length - 1].nav;
+    
+    // 近1月（30天前）
+    const nav1M = navHistory[navHistory.length - 30]?.nav || currentNav;
+    const perf1M = ((currentNav - nav1M) / nav1M * 100).toFixed(2);
+    
+    // 近3月（90天前）
+    const nav3M = navHistory[navHistory.length - 90]?.nav || currentNav;
+    const perf3M = ((currentNav - nav3M) / nav3M * 100).toFixed(2);
+    
+    // 近6月（180天前）
+    const nav6M = navHistory[navHistory.length - 180]?.nav || currentNav;
+    const perf6M = ((currentNav - nav6M) / nav6M * 100).toFixed(2);
+    
+    // 成立以来
+    const initialNav = navHistory[0]?.nav || currentNav;
+    const perfTotal = ((currentNav - initialNav) / initialNav * 100).toFixed(2);
+    
+    return {
+      '近1月': `${perf1M > 0 ? '+' : ''}${perf1M}%`,
+      '近3月': `${perf3M > 0 ? '+' : ''}${perf3M}%`,
+      '近6月': `${perf6M > 0 ? '+' : ''}${perf6M}%`,
+      '成立来': `${perfTotal > 0 ? '+' : ''}${perfTotal}%`
+    };
+  };
+  
+  const performance = useMemo(() => calculatePerformance(), [navHistory]);
   
   // Mock资产占比数据
   const assetAllocation = {
@@ -147,16 +211,22 @@ const FundDetail = ({ fund, onBack }) => {
       {/* 涨跌幅大字显示 */}
       <div className="fund-performance-big">
         <div className={`big-change ${fund.change?.startsWith('+') ? 'positive' : 'negative'}`}>
-          {fund.change || '+37.94%'}
+          {fund.changePercent || '+2.13%'}
         </div>
         <div className="performance-details">
           <div className="detail-item">
-            <span className="detail-value">{fund.changePercent || '+1.19%'}</span>
-            <span className="detail-label">日涨跌幅</span>
+            <span className={`detail-value ${fund.change?.startsWith('+') ? 'positive' : 'negative'}`}>
+              {fund.change || '+0.0598'}
+            </span>
+            <span className="detail-label">日涨跌额</span>
           </div>
           <div className="detail-item">
-            <span className="detail-value">{fund.nav || '1.3794'}</span>
+            <span className="detail-value">{fund.nav || '2.8745'}</span>
             <span className="detail-label">单位净值 (11-6)</span>
+          </div>
+          <div className="detail-item">
+            <span className="detail-value secondary">{yesterdayNav}</span>
+            <span className="detail-label">昨日净值</span>
           </div>
         </div>
       </div>
@@ -171,11 +241,11 @@ const FundDetail = ({ fund, onBack }) => {
       <div className="chart-section">
         <div className="chart-header">
           <span className="chart-title">净值走势</span>
-          <span className="chart-value">成立以来+300%</span>
+          <span className="chart-value">成立以来{performance['成立来']}</span>
         </div>
         
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={filteredData}>
+          <LineChart data={filteredData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="displayDate" 
@@ -183,9 +253,17 @@ const FundDetail = ({ fund, onBack }) => {
               stroke="#999"
             />
             <YAxis 
-              domain={['dataMin - 0.01', 'dataMax + 0.01']}
+              domain={['auto', 'auto']}
               tick={{ fontSize: 12 }}
               stroke="#999"
+              tickFormatter={(value) => {
+                // 确保数值正确格式化为4位小数
+                const num = Number(value);
+                if (isNaN(num)) return '0.0000';
+                return num.toFixed(4);
+              }}
+              allowDataOverflow={false}
+              scale="linear"
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#666', strokeDasharray: '3 3' }} />
             <Line 
