@@ -20,21 +20,10 @@ function App() {
     
 
   const [selectedFund, setSelectedFund] = useState(null);
-  const [userActions, setUserActions] = useState([]);
-  const [hasNewSuggestion, setHasNewSuggestion] = useState(false);
-  const [showSuggestionBubble, setShowSuggestionBubble] = useState(false);
-  const [currentSuggestion, setCurrentSuggestion] = useState('');
-
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('home'); // 'home', 'account', 'transfer', 'financing', 'deposit', etc.
   const [financingTab, setFinancingTab] = useState('funds'); // 仅保留基金页
-
-  const [currentSuggestionId, setCurrentSuggestionId] = useState('');
   const appRef = useRef(null);
-  const suggestionTimeoutRef = useRef(null);
-  const chatContainerRef = useRef(null);
-
-  const currentUtteranceRef = useRef(null);
 
   // ===== 统一的AI建议管理系统 =====
   
@@ -51,7 +40,7 @@ function App() {
     setTimeout(() => {
       console.log('[App] 登录后触发AI建议');
       triggerPageAISuggestion('home');
-    }, 1000);
+    }, 500);
   };
 
   // 处理选择基金
