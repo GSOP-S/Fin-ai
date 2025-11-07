@@ -4,6 +4,7 @@ import AIAssistant from './components/AIAssistant';
 import AISuggestionBubble from './components/ai/AISuggestionBubble';
 import Login from './components/Login';
 import FundList from './components/FundList';
+import FundDetail from './components/FundDetail';
 import HomePage from './components/HomePage';
 import TransferPage from './components/TransferPage';
 import BillDetail from './components/BillDetail';
@@ -74,22 +75,13 @@ function App() {
     // 如果有选中的基金，显示基金详情
     if (selectedFund) {
       return (
-        <div className="fund-detail">
-          <button className="back-btn" onClick={() => {
+        <FundDetail 
+          fund={selectedFund}
+          onBack={() => {
             setSelectedFund(null);
             handleNavigate('financing');
-          }}>返回</button>
-          <h2>{selectedFund.name} ({selectedFund.code})</h2>
-          <div className="fund-nav">净值：{Number(selectedFund.nav)?.toFixed(4) || '0.0000'}元</div>
-          <div className={`fund-change ${selectedFund.change.startsWith('+') ? 'positive' : 'negative'}`}>
-            {selectedFund.change} ({selectedFund.changePercent})
-          </div>
-          <div className="fund-info">
-            <div>基金经理：{selectedFund.manager}</div>
-            <div>基金类型：{selectedFund.category}</div>
-            <div>风险等级：{selectedFund.risk}</div>
-          </div>
-        </div>
+          }}
+        />
       );
     }
   
