@@ -22,6 +22,10 @@ class BehaviorTracker {
     // 重试队列
     this.retryQueue = [];
     
+    // 事件监听器引用（用于清理）
+    this.beforeUnloadHandler = null;
+    this.visibilityChangeHandler = null;
+    
     // 初始化
     this.init();
   }
@@ -69,18 +73,20 @@ class BehaviorTracker {
     this.recoverFromLocalStorage();
     
     // 监听页面卸载，上报剩余日志
-    window.addEventListener('beforeunload', () => {
+    this.beforeUnloadHandler = () => {
       this.flush();
-    });
+    };
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
     
     // 监听页面可见性变化
-    document.addEventListener('visibilitychange', () => {
+    this.visibilityChangeHandler = () => {
       if (document.hidden) {
         this.track(EventTypes.PAGE_BLUR, {});
       } else {
         this.track(EventTypes.PAGE_FOCUS, {});
       }
-    });
+    };
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
     
     this.log('初始化完成', { sessionId: this.sessionId });
   }
@@ -489,12 +495,27 @@ class BehaviorTracker {
    * 销毁追踪器
    */
   destroy() {
+    // 清理定时器
     if (this.uploadTimer) {
       clearInterval(this.uploadTimer);
+      this.uploadTimer = null;
     }
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
+    
+    // 移除事件监听器（防止内存泄漏）
+    if (this.beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+      this.beforeUnloadHandler = null;
+    }
+    if (this.visibilityChangeHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+      this.visibilityChangeHandler = null;
+    }
+    
+    // 上报剩余日志
     this.flush();
   }
   
