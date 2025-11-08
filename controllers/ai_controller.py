@@ -9,6 +9,7 @@ from services.fund_service import FundService
 from services.bill_analysis_service import BillAnalysisService
 from services.transfer_suggestion_service import TransferSuggestionService
 from services.ai_service import AIService
+from services.mock import analyze_user_logs
 
 
 # 创建服务实例
@@ -105,3 +106,28 @@ def register_ai_routes(app):
         except Exception as e:
             print(f"获取AI建议失败: {str(e)}")
             return jsonify({'error': '获取AI建议失败，请稍后再试'}), 500
+    
+    @app.route('/api/ai/analyze-logs', methods=['POST'])
+    def analyze_user_behavior_logs():
+        """分析用户行为日志并返回mock响应"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': '请求数据不能为空'}), 400
+            
+            user_id = data.get('userId', '')
+            page_type = data.get('pageType', '')
+            
+            if not user_id:
+                return jsonify({'error': '用户ID不能为空'}), 400
+            
+            # 使用mock服务分析用户日志
+            result = analyze_user_logs(user_id, page_type)
+            
+            return jsonify({
+                'success': True,
+                'data': result
+            })
+        except Exception as e:
+            print(f"分析用户行为日志失败: {str(e)}")
+            return jsonify({'error': '分析用户行为日志失败，请稍后再试'}), 500

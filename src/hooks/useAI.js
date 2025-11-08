@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { generateAISuggestion } from '../api/ai';
+import { generateAISuggestion, analyzeUserLogs } from '../api/ai';
 import { formatAISuggestion } from '../utils/aiFormatter';
 import { getAIConfig, AI_SPEECH_CONFIG } from '../config/ai.config';
 
@@ -250,6 +250,99 @@ export function useAI(options = {}) {
   }, []);
   
   /**
+   * 分析用户行为日志并显示建议
+   * @param {string} userId - 用户ID
+   * @param {string} pageType - 页面类型(可选)
+   * @param {object} configOverrides - 配置覆盖
+   */
+  const analyzeAndShow = useCallback(async (userId, pageType = '', configOverrides = {}) => {
+    console.log(`[AI] 分析用户日志: userId=${userId}, pageType=${pageType}`);
+    
+    // 清除之前的定时器
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+    
+    // 停止之前的语音
+    if (speechRef.current) {
+      window.speechSynthesis.cancel();
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // 获取配置
+      let config;
+      try {
+        config = getAIConfig(pageType || 'home', { ...options, ...configOverrides });
+        console.log(`[AI] 配置:`, config);
+      } catch (configError) {
+        console.error('AI配置获取失败:', configError);
+        // 使用默认配置继续
+        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+      }
+      
+      // 调用日志分析API
+      const result = await analyzeUserLogs(userId, pageType);
+      console.log(`[AI] 日志分析结果:`, result);
+      
+      // 检查返回的command字段
+      const command = result.command || 'bubble';
+      const text = result.suggestion || '暂无建议';
+      
+      // 更新状态
+      setSuggestion(result);
+      setSuggestionText(text);
+      
+      // 根据command字段决定是否显示弹窗
+      if (command === 'yes' || command === 'bubble') {
+        console.log(`[AI] 显示建议弹窗: ${text}`);
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      } else if (command === 'highlight' && result.fund_id) {
+        console.log(`[AI] 高亮基金: ${result.fund_id}`);
+        // 这里可以添加高亮特定基金的逻辑
+        // 例如，通过事件或状态管理来通知其他组件高亮显示特定基金
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      } else {
+        console.log(`[AI] 不显示弹窗，command: ${command}`);
+        setIsVisible(false);
+      }
+      
+      // 语音播报
+      if (config.speakEnabled && text) {
+        try {
+          speak(text);
+        } catch (speechError) {
+          console.error('语音播报调用失败:', speechError);
+        }
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('用户日志分析失败:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [options, speak]);
+  
+  /**
    * 清理资源
    */
   useEffect(() => {
@@ -277,6 +370,7 @@ export function useAI(options = {}) {
     speak,            // 语音播报
     toggleSpeech,     // 切换语音播报状态（从App.jsx迁移而来）
     stopSpeaking,     // 停止播报
+    analyzeAndShow,   // 分析用户日志并显示建议
   };
 }
 

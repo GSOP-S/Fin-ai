@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
     suggestion: '/api/ai/suggestion',
     feedback: '/api/ai/feedback',
     settings: '/api/ai/settings',
+    analyzeLogs: '/api/ai/analyze-logs',
   },
   
   // 账单相关接口

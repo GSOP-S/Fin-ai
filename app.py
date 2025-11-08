@@ -3,7 +3,7 @@ Flask应用入口文件
 负责应用初始化、蓝图注册和启动
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -55,6 +55,17 @@ app.register_blueprint(behavior_bp)
 # 注册AI路由（使用新的注册方式）
 from controllers.ai_controller import register_ai_routes
 register_ai_routes(app)
+
+# 测试页面路由
+@app.route('/test_mock.html')
+def test_mock_page():
+    """提供Mock测试页面"""
+    return send_from_directory('.', 'test_mock.html')
+
+@app.route('/mock_demo.html')
+def mock_demo_page():
+    """提供Mock演示页面"""
+    return send_from_directory('.', 'mock_demo.html')
 
 # 健康检查接口
 @app.route('/health', methods=['GET'])
