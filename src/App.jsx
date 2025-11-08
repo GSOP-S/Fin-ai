@@ -14,6 +14,7 @@ import { submitFeedback } from './api/feedback';
 import { showFundSuggestion } from './api/fund';
 import request from './api/request';
 import { useAI} from './hooks/useAI';
+import { BehaviorTracker } from './utils/BehaviorTracker';
 
 
 function App() {
@@ -49,11 +50,25 @@ function App() {
     console.log('[App] 用户登录:', userData);
     setUser(userData);
     
-    // 确保用户登录后立即触发首页AI建议
-    setTimeout(() => {
-      console.log('[App] 登录后触发AI建议');
-      triggerPageAISuggestion('home');
-    }, 1000);
+    // 初始化行为追踪器
+    if (userData && userData.id) {
+      BehaviorTracker.init(userData.id);
+      console.log('[App] 已初始化行为追踪器，用户ID:', userData.id);
+      
+      // 记录登录事件
+      BehaviorTracker.track('LOGIN', {
+        user_id: userData.id,
+        user_name: userData.displayName,
+        timestamp: Date.now()
+      }, { realtime: true });
+      
+      // 记录页面访问事件
+      BehaviorTracker.track('PAGE_VIEW', {
+        page: 'home',
+        page_url: window.location.pathname,
+        timestamp: Date.now()
+      }, { realtime: true });
+    }
   };
 
   // 处理选择基金
@@ -169,26 +184,28 @@ function App() {
     return titles[page] || '功能页面';
   };
   
-  // 监听financingTab的变化，确保从HomePage点击推荐产品时能正确设置标签
+  // 监听AI建议事件
   useEffect(() => {
-    const checkTabChange = () => {
-      if (window.financingTab) {
-        setFinancingTab(window.financingTab);
-        // 清除全局变量
-        delete window.financingTab;
-      }
+    const handleAISuggestion = (event) => {
+      const { suggestion, command, confidence } = event.detail;
+      console.log('[App] 收到AI建议:', suggestion, command, confidence);
+      
+      // 使用统一的AI状态管理显示建议
+      ai.show({
+        content: suggestion,
+        source: 'behavior',
+        confidence: confidence
+      });
     };
-    
-    // 立即检查一次
-    checkTabChange();
-    
-    // 添加窗口事件监听器（可选）
-    window.addEventListener('tabchange', checkTabChange);
-    
+
+    // 添加事件监听器
+    window.addEventListener('ai-suggestion-received', handleAISuggestion);
+
+    // 清理函数
     return () => {
-      window.removeEventListener('tabchange', checkTabChange);
+      window.removeEventListener('ai-suggestion-received', handleAISuggestion);
     };
-  }, []);
+  }, [ai]);
   
   // 处理页面导航
   const handleNavigate = (page) => {
@@ -198,74 +215,17 @@ function App() {
     // 设置当前页面
     setCurrentPage(page);
     
+    // 记录页面访问事件
+    if (user && user.id) {
+      BehaviorTracker.track('PAGE_VIEW', {
+        page: page,
+        page_url: window.location.pathname,
+        timestamp: Date.now()
+      }, { realtime: true });
+    }
+    
     // 清除建议气泡 - 使用统一的AI状态管理
     ai.hide();
-    
-    // 延迟触发新页面的AI建议
-    setTimeout(() => {
-      triggerPageAISuggestion(page);
-    }, 1000);
-  };
-  
-  // 根据页面类型自动触发AI建议
-  const triggerPageAISuggestion = async (page) => {
-    console.log(`[App] 触发AI建议: page=${page}, user=`, user);
-    
-    if (!user) {
-      console.log('[App] 用户未登录，不触发AI建议');
-      return; // 未登录不触发
-    }
-    
-    // 确保AI状态已初始化
-    if (!ai || !ai.show) {
-      console.log('[App] AI状态未初始化，延迟重试');
-      setTimeout(() => {
-        triggerPageAISuggestion(page);
-      }, 100);
-      return;
-    }
-    
-    switch(page) {
-      case 'home':
-        // 首页显示欢迎和快捷操作建议
-        console.log('[App] 触发首页AI建议');
-        ai.show('home', { userId: user.id }, {
-          autoShow: true,
-          autoHideDelay: 8000,
-          speakEnabled: false
-        });
-        break;
-        
-      case 'financing':
-        // 理财页面显示市场分析
-        console.log('[App] 触发理财页面AI建议');
-        ai.show('market', {}, {
-          autoShow: true,
-          autoHideDelay: 10000,
-          speakEnabled: false
-        });
-        break;
-        
-      case 'account':
-        // 账单页面由BillDetail组件内部处理
-        console.log('[App] 账单页面AI建议由BillDetail组件处理');
-        break;
-        
-      case 'transfer':
-        // 转账页面显示常用账户推荐
-        console.log('[App] 触发转账页面AI建议');
-        ai.show('transfer', { userId: user.id }, {
-          autoShow: true,
-          autoHideDelay: 8000,
-          speakEnabled: false
-        });
-        break;
-        
-      default:
-        // 其他页面不自动触发
-        console.log(`[App] ${page}页面不自动触发AI建议`);
-        break;
-    }
   };
   
   // 如果用户未登录，显示登录页面

@@ -26,6 +26,30 @@ class BehaviorTracker {
     this.init();
   }
   
+  // 单例模式
+  static instance = null;
+  
+  /**
+   * 获取单例实例
+   */
+  static getInstance() {
+    if (!BehaviorTracker.instance) {
+      BehaviorTracker.instance = new BehaviorTracker();
+    }
+    return BehaviorTracker.instance;
+  }
+  
+  /**
+   * 初始化追踪器
+   */
+  static init(userId) {
+    const tracker = BehaviorTracker.getInstance();
+    if (userId) {
+      tracker.setUserId(userId);
+    }
+    return tracker;
+  }
+  
   /**
    * 初始化追踪器
    */
@@ -273,7 +297,7 @@ class BehaviorTracker {
    * 发送到服务器
    */
   async sendToServer(events, retryCount = 0) {
-    const response = await fetch(TrackingConfig.apiEndpoint, {
+    const response = await fetch(`${window.location.origin}/api/behavior/track`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -291,7 +315,32 @@ class BehaviorTracker {
       throw new Error(`HTTP ${response.status}`);
     }
     
-    return response.json();
+    const result = await response.json();
+    
+    // 如果服务器返回了AI建议，触发弹窗显示
+    if (result.success && result.data && result.data.ai_suggestion) {
+      this.handleAISuggestion(result.data.ai_suggestion);
+    }
+    
+    return result;
+  }
+
+  // 处理AI建议
+  handleAISuggestion(aiSuggestion) {
+    // 检查是否需要显示弹窗
+    const command = aiSuggestion.command || '';
+    if (command === 'bubble' || command === 'yes') {
+      // 触发自定义事件，通知应用显示AI建议弹窗
+      const event = new CustomEvent('ai-suggestion-received', {
+        detail: {
+          suggestion: aiSuggestion.suggestion || '',
+          command: command,
+          confidence: aiSuggestion.confidence || 0,
+        }
+      });
+      window.dispatchEvent(event);
+      console.log('[BehaviorTracker] 已触发AI建议弹窗事件');
+    }
   }
   
   /**
@@ -448,17 +497,37 @@ class BehaviorTracker {
     }
     this.flush();
   }
+  
+  /**
+   * 静态方法：记录事件
+   */
+  static track(eventType, eventData = {}, options = {}) {
+    const tracker = BehaviorTracker.getInstance();
+    return tracker.track(eventType, eventData, options);
+  }
+  
+  /**
+   * 静态方法：立即上报所有事件
+   */
+  static flush() {
+    const tracker = BehaviorTracker.getInstance();
+    return tracker.flush();
+  }
+  
+  /**
+   * 静态方法：设置用户ID
+   */
+  static setUserId(userId) {
+    const tracker = BehaviorTracker.getInstance();
+    return tracker.setUserId(userId);
+  }
 }
 
-// 创建单例
-let trackerInstance = null;
+// 导出单例实例
+export const behaviorTracker = BehaviorTracker.getInstance();
 
-export const getTracker = () => {
-  if (!trackerInstance) {
-    trackerInstance = new BehaviorTracker();
-  }
-  return trackerInstance;
-};
+// 导出类
+export { BehaviorTracker };
 
 export default BehaviorTracker;
 

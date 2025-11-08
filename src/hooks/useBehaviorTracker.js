@@ -4,14 +4,14 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { getTracker } from '../utils/BehaviorTracker';
+import { BehaviorTracker } from '../utils/BehaviorTracker';
 
 export const useBehaviorTracker = () => {
   const trackerRef = useRef(null);
   
   useEffect(() => {
     // 获取tracker单例
-    trackerRef.current = getTracker();
+    trackerRef.current = BehaviorTracker.getInstance();
   }, []);
   
   // 返回track方法

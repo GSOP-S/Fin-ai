@@ -43,9 +43,14 @@ def track_behaviors():
         
         # 数据验证
         valid_events = []
+        user_id = None
+        
         for event in events:
             if validate_event(event):
                 valid_events.append(event)
+                # 获取用户ID用于后续分析
+                if not user_id and event.get('user_id'):
+                    user_id = event.get('user_id')
         
         if not valid_events:
             return error_response('没有有效的事件数据', 400)
@@ -53,12 +58,28 @@ def track_behaviors():
         # 批量插入数据库
         affected_rows = behavior_mapper.batch_insert_logs(valid_events)
         
-        return success_response({
+        # 如果有用户ID，调用mock服务分析用户日志
+        ai_suggestion = None
+        if user_id:
+            try:
+                from services.mock import analyze_user_logs
+                ai_suggestion = analyze_user_logs(user_id)
+                print(f"[behavior_controller] 已为用户 {user_id} 生成AI建议")
+            except Exception as e:
+                print(f"[behavior_controller] 生成AI建议失败: {str(e)}")
+        
+        response_data = {
             'received': len(events),
             'valid': len(valid_events),
             'inserted': affected_rows,
             'server_time': int(datetime.now().timestamp() * 1000)
-        }, '行为日志上报成功')
+        }
+        
+        # 如果有AI建议，添加到响应中
+        if ai_suggestion:
+            response_data['ai_suggestion'] = ai_suggestion
+        
+        return success_response(response_data, '行为日志上报成功')
         
     except Exception as e:
         print(f"[behavior_controller] 上报失败: {str(e)}")

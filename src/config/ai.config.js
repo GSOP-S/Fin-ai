@@ -39,6 +39,13 @@ export const AI_PAGE_CONFIGS = {
     speakEnabled: false,
     bubbleTitle: '💰 基金建议',
   },
+  
+  behavior: {
+    autoShow: true,
+    autoHideDelay: 15000,
+    speakEnabled: false,
+    bubbleTitle: '🤖 行为分析',
+  },
 };
 
 // 默认配置

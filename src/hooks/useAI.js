@@ -26,8 +26,36 @@ export function useAI(options = {}) {
   const speechRef = useRef(null);
   
   /**
+   * 语音播报
+   * @param {string} text - 要播报的文本
+   */
+  const speak = useCallback((text) => {
+    if (!window.speechSynthesis) {
+      console.warn('浏览器不支持语音播报');
+      return;
+    }
+    
+    try {
+      // 取消之前的播报
+      window.speechSynthesis.cancel();
+      
+      // 创建语音对象
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = AI_SPEECH_CONFIG.rate;
+      utterance.pitch = AI_SPEECH_CONFIG.pitch;
+      utterance.volume = AI_SPEECH_CONFIG.volume;
+      utterance.lang = AI_SPEECH_CONFIG.lang;
+      
+      speechRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error('语音播报失败:', err);
+    }
+  }, []);
+  
+  /**
    * 显示AI建议
-   * @param {string} pageType - 页面类型 (bill/transfer/fund...)
+   * @param {string} pageType - 页面类型 (bill/transfer/fund...) 或包含content的对象
    * @param {object} context - 上下文数据
    * @param {object} configOverrides - 配置覆盖
    */
@@ -44,6 +72,59 @@ export function useAI(options = {}) {
       window.speechSynthesis.cancel();
     }
     
+    // 处理来自行为追踪的直接建议对象
+    if (typeof pageType === 'object' && pageType.content) {
+      const { content, source, confidence } = pageType;
+      console.log(`[AI] 显示行为追踪建议: ${content}, source=${source}, confidence=${confidence}`);
+      
+      // 获取默认配置
+      let config;
+      try {
+        config = getAIConfig('behavior', { ...options, ...configOverrides });
+      } catch (configError) {
+        console.error('AI配置获取失败:', configError);
+        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+      }
+      
+      // 更新状态
+      setSuggestion({
+        suggestion: content,
+        command: 'bubble',
+        confidence: confidence || 0,
+        source: source || 'behavior'
+      });
+      setSuggestionText(content);
+      
+      // 自动显示
+      if (config.autoShow) {
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      }
+      
+      // 语音播报
+      if (config.speakEnabled && content) {
+        try {
+          speak(content);
+        } catch (speechError) {
+          console.error('语音播报调用失败:', speechError);
+        }
+      }
+      
+      return {
+        suggestion: content,
+        command: 'bubble',
+        confidence: confidence || 0,
+        source: source || 'behavior'
+      };
+    }
+    
+    // 原有的页面类型处理逻辑
     setIsLoading(true);
     setError(null);
     
@@ -167,7 +248,7 @@ export function useAI(options = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, speak]);
   
   /**
    * 隐藏建议
@@ -179,34 +260,6 @@ export function useAI(options = {}) {
     }
     if (speechRef.current) {
       window.speechSynthesis.cancel();
-    }
-  }, []);
-  
-  /**
-   * 语音播报
-   * @param {string} text - 要播报的文本
-   */
-  const speak = useCallback((text) => {
-    if (!window.speechSynthesis) {
-      console.warn('浏览器不支持语音播报');
-      return;
-    }
-    
-    try {
-      // 取消之前的播报
-      window.speechSynthesis.cancel();
-      
-      // 创建语音对象
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = AI_SPEECH_CONFIG.rate;
-      utterance.pitch = AI_SPEECH_CONFIG.pitch;
-      utterance.volume = AI_SPEECH_CONFIG.volume;
-      utterance.lang = AI_SPEECH_CONFIG.lang;
-      
-      speechRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.error('语音播报失败:', err);
     }
   }, []);
   
