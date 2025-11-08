@@ -83,3 +83,25 @@
 .login-btn:active {
   transform: scale(0.98);
 }
+
+.register-link {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 5px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.link-btn:hover {
+  color: #764ba2;
+}

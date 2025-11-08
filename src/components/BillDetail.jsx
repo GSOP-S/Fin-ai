@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { fetchUserBills, fetchBillAnalysis } from '../api/bill';
 import './BillDetail.css';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
 import { EventTypes } from '../config/tracking.config';
 
-const BillDetail = ({ onNavigate, onShowAI }) => {
+const BillDetail = ({ onNavigate }) => {
   // ===== 行为追踪 =====
   const tracker = useBehaviorTracker();
   usePageTracking('account', { section: 'bill_detail' });
@@ -14,8 +13,6 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [aiSuggestionTriggered, setAiSuggestionTriggered] = useState(false);
-  const [billAnalysis, setBillAnalysis] = useState(null);
 
   // 模拟账单数据
   useEffect(() => {
@@ -79,39 +76,10 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
       ];
       setBills(mockBills);
       setLoading(false);
-      setAiSuggestionTriggered(false); // 重置触发状态
-      setBillAnalysis(null); // 重置账单分析
     }, 800);
   }, [selectedMonth]);
   
-  // 数据加载完成后，自动触发AI建议
-  useEffect(() => {
-    if (!loading && bills.length > 0 && !aiSuggestionTriggered && onShowAI) {
-      // 延迟触发，让用户先看到账单列表
-      setTimeout(() => {
-        // 调用后端API获取账单分析
-        fetchBillAnalysis('user123', bills, selectedMonth)
-          .then(analysis => {
-            if (analysis && analysis.success) {
-              setBillAnalysis(analysis.data);
-              // 触发AI建议显示
-              onShowAI('bill', { 
-                bills,
-                billData: analysis.data  // 使用后端返回的分析数据
-              }, {
-                autoShow: true,
-                autoHideDelay: 30000, // 账单分析显示30秒
-                speakEnabled: true
-              });
-              setAiSuggestionTriggered(true);
-            }
-          })
-          .catch(error => {
-            console.error('获取账单分析失败:', error);
-          });
-      }, 1500);
-    }
-  }, [loading, bills, aiSuggestionTriggered, onShowAI, selectedMonth]);
+  // 自动触发AI建议已删除，改为完全依赖行为追踪触发
 
   // 格式化金额显示
   const formatAmount = (amount) => {
@@ -167,44 +135,21 @@ const BillDetail = ({ onNavigate, onShowAI }) => {
         </div>
       </div>
 
-      {/* 添加手动触发AI分析按钮 */}
+      {/* 手动触发行为追踪分析按钮 */}
       {!loading && bills.length > 0 && (
         <div className="ai-trigger-bar">
           <button 
             className="ai-analysis-btn"
             onClick={() => {
-              if (onShowAI) {
-                // 如果已有分析数据，直接显示；否则重新获取
-                if (billAnalysis) {
-                  onShowAI('bill', { 
-                    bills,
-                    billData: billAnalysis  // 使用已有的分析数据
-                  }, {
-                    autoShow: true,
-                    autoHideDelay: 0, // 手动触发时不自动隐藏
-                    speakEnabled: false
-                  });
-                } else {
-                  // 重新获取分析数据
-                  fetchBillAnalysis('user123', bills, selectedMonth)
-                    .then(analysis => {
-                      if (analysis && analysis.success) {
-                        setBillAnalysis(analysis.data);
-                        onShowAI('bill', { 
-                          bills,
-                          billData: analysis.data  // 使用后端返回的分析数据
-                        }, {
-                          autoShow: true,
-                          autoHideDelay: 0, // 手动触发时不自动隐藏
-                          speakEnabled: false
-                        });
-                      }
-                    })
-                    .catch(error => {
-                      console.error('获取账单分析失败:', error);
-                    });
-                }
-              }
+              // 触发行为追踪分析（发送特殊事件到后端）
+              tracker.track('request_bill_analysis', {
+                page: 'account',
+                selected_month: selectedMonth,
+                bill_count: bills.length,
+                total_amount: bills.reduce((sum, b) => sum + b.amount, 0),
+              }, { realtime: true });  // 实时上报，后端分析后返回弹窗指令
+              
+              console.log('[BillDetail] 已请求AI账单分析');
             }}
           >
             <span className="ai-icon">🤖</span>

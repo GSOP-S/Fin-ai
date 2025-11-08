@@ -20,6 +20,34 @@ import { BehaviorTracker } from './utils/BehaviorTracker';
 function App() {
   // 统一的AI气泡管理 - 所有页面共用
   const ai = useAI();
+  
+  // ===== 监听行为追踪触发的AI建议（核心逻辑）=====
+  useEffect(() => {
+    const handleBehaviorAISuggestion = (event) => {
+      console.log('[App] 收到行为追踪AI建议:', event.detail);
+      
+      const { suggestion, command, confidence } = event.detail;
+      
+      // 显示弹窗（完全由后端command控制）
+      ai.show({
+        content: suggestion,
+        source: 'behavior',
+        confidence: confidence
+      }, {}, {
+        autoShow: true,           // 行为追踪建议默认自动显示
+        autoHideDelay: 15000,     // 15秒后隐藏
+        speakEnabled: false
+      });
+    };
+    
+    // 添加监听器
+    window.addEventListener('ai-suggestion-received', handleBehaviorAISuggestion);
+    
+    // 清理监听器
+    return () => {
+      window.removeEventListener('ai-suggestion-received', handleBehaviorAISuggestion);
+    };
+  }, [ai]);
     
 
   const [selectedFund, setSelectedFund] = useState(null);
@@ -129,7 +157,6 @@ function App() {
         return (
           <BillDetail 
             onNavigate={handleNavigate}
-            onShowAI={ai.show}
           />
         );
       
@@ -137,7 +164,6 @@ function App() {
         return (
           <TransferPage 
             onNavigate={handleNavigate}
-            onShowAI={ai.show}
           />
         );
       

@@ -1,11 +1,23 @@
 import React, { useState } from 'react';
 import './Login.css';
 import { loginUser } from '../api/user';
+import Register from './Register';
 
 const Login = ({ onLogin }) => {
+  const [showRegister, setShowRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  
+  // 如果显示注册页面
+  if (showRegister) {
+    return (
+      <Register 
+        onComplete={() => setShowRegister(false)}
+        onBackToLogin={() => setShowRegister(false)}
+      />
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,6 +73,17 @@ const Login = ({ onLogin }) => {
           </div>
           {error && <div className="error-message">{error}</div>}
           <button type="submit" className="login-btn">登录</button>
+          
+          <div className="register-link">
+            还没有账号？
+            <button 
+              type="button" 
+              onClick={() => setShowRegister(true)}
+              className="link-btn"
+            >
+              立即注册
+            </button>
+          </div>
         </form>
       </div>
     </div>

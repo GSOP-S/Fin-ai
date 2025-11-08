@@ -84,4 +84,63 @@ class UserMapper:
             WHERE user_id = %s
         """
         return db_execute(query, (display_name, user_id))
+    
+    @staticmethod
+    def register_user(
+        username: str,
+        password: str,
+        real_name: str,
+        id_card: str,
+        phone: str,
+        city: str,
+        occupation: str,
+        risk_score: float,
+        risk_level: str,
+        investment_purposes: str
+    ) -> int:
+        """
+        注册新用户（包含详细资料）
+        
+        Args:
+            username: 用户名
+            password: 密码
+            real_name: 真实姓名
+            id_card: 身份证号
+            phone: 手机号
+            city: 城市
+            occupation: 职业
+            risk_score: 风险评分
+            risk_level: 风险等级
+            investment_purposes: 投资目的（逗号分隔）
+            
+        Returns:
+            插入的行数
+        """
+        query = """
+            INSERT INTO Users (
+                user_id, password, display_name,
+                real_name, id_card, phone, city, occupation,
+                risk_score, risk_level, investment_purposes
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        return db_execute(query, (
+            username, password, real_name,
+            real_name, id_card, phone, city, occupation,
+            risk_score, risk_level, investment_purposes
+        ))
+    
+    @staticmethod
+    def check_username_exists(username: str) -> bool:
+        """
+        检查用户名是否已存在
+        
+        Args:
+            username: 用户名
+            
+        Returns:
+            存在返回True，否则返回False
+        """
+        query = "SELECT COUNT(*) as count FROM Users WHERE user_id = %s"
+        result = db_query(query, (username,), fetch_one=True)
+        return result['count'] > 0 if result else False
 

@@ -4,7 +4,7 @@ import { usePageTracking } from '../hooks/usePageTracking';
 import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
 import { EventTypes } from '../config/tracking.config';
 
-function TransferPage({ onNavigate, onShowAI }) {
+function TransferPage({ onNavigate }) {
   // ===== 行为追踪 =====
   const tracker = useBehaviorTracker();
   usePageTracking('transfer');
@@ -68,50 +68,22 @@ function TransferPage({ onNavigate, onShowAI }) {
       });
     }
     
-    // 当输入完整账号后，触发AI建议
-    if (value.length >= 10 && onShowAI) {
-      // 准备传递给后端AI服务的数据
-      const transferData = {
-        recipientAccount: value,
-        accountType: detectedAccountType,
-        isFirstTimeAccount: isFirstTime,
-        recentAccounts,
-        amount: transferAmount
-      };
-      
-      // 自动触发AI建议气泡（延迟500ms，让用户看到账户类型变化）
-      setTimeout(() => {
-        onShowAI('transfer', {
-          transferData
-        }, {
-          autoShow: true,
-          autoHideDelay: 25000,
-          speakEnabled: false
-        });
-      }, 500);
-    }
+    // 自动触发AI建议已删除，改为完全依赖行为追踪触发
   };
 
-  // 手动触发AI转账建议
+  // 手动触发行为追踪分析
   const triggerAISuggestion = () => {
-    if (!onShowAI) return;
+    // 触发行为追踪分析（发送特殊事件到后端）
+    tracker.track('request_transfer_analysis', {
+      page: 'transfer',
+      recipient_account: recipientAccount,
+      account_type: accountType,
+      is_first_time: isFirstTimeAccount,
+      transfer_amount: parseFloat(transferAmount) || 0,
+      has_amount: !!transferAmount,
+    }, { realtime: true });  // 实时上报，后端分析后返回弹窗指令
     
-    // 准备传递给后端AI服务的数据
-    const transferData = {
-      recipientAccount,
-      accountType,
-      isFirstTimeAccount,
-      recentAccounts,
-      amount: transferAmount
-    };
-    
-    onShowAI('transfer', {
-      transferData
-    }, {
-      autoShow: true,
-      autoHideDelay: 0, // 手动触发不自动隐藏
-      speakEnabled: false
-    });
+    console.log('[TransferPage] 已请求AI转账分析');
   };
 
   // 处理金额输入

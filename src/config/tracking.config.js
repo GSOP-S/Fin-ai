@@ -42,6 +42,10 @@ export const EventTypes = {
   AI_OPEN: 'ai_open',               // 打开AI助手
   AI_MESSAGE: 'ai_message',         // 发送AI消息
   AI_SUGGESTION: 'ai_suggestion',   // AI建议
+  
+  // 手动请求分析事件（触发后端智能分析）
+  REQUEST_BILL_ANALYSIS: 'request_bill_analysis',       // 请求账单分析
+  REQUEST_TRANSFER_ANALYSIS: 'request_transfer_analysis', // 请求转账分析
 };
 
 // ===== 实时上报事件（关键业务操作） =====
@@ -50,6 +54,8 @@ export const RealtimeEvents = [
   EventTypes.FUND_VIEW,             // 查看基金详情
   EventTypes.NEWS_READ,             // 阅读资讯
   EventTypes.AI_MESSAGE,            // AI交互
+  EventTypes.REQUEST_BILL_ANALYSIS,     // 请求账单分析（实时）
+  EventTypes.REQUEST_TRANSFER_ANALYSIS, // 请求转账分析（实时）
 ];
 
 // ===== 敏感字段配置 =====
