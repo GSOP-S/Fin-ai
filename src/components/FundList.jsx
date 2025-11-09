@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './FundList.css';
 import { fetchFundList, getCachedFundSuggestion } from '../api/fund';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
 import { EventTypes } from '../config/tracking.config';
 
-const FundList = ({ onSelectFund }) => {
+const FundList = ({ onSelectFund, highlightedFundIds = [] }) => {
   // ===== 行为追踪 =====
   const tracker = useBehaviorTracker();
   usePageTracking('financing', { section: 'fund_list' });
@@ -15,6 +15,9 @@ const FundList = ({ onSelectFund }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fundSuggestions, setFundSuggestions] = useState({}); // 存储基金建议缓存
+  
+  // 基金卡片引用（用于滚动）
+  const fundRefs = useRef({});
   
   // 分页和筛选状态
   const [pagination, setPagination] = useState({
@@ -97,6 +100,34 @@ const FundList = ({ onSelectFund }) => {
   useEffect(() => {
     fetchFunds();
   }, []);
+  
+  // 监听滚动到基金的事件
+  useEffect(() => {
+    const handleScrollToFund = (event) => {
+      const { fundCodes } = event.detail;
+      if (!fundCodes || fundCodes.length === 0) return;
+      
+      // 滚动到第一个高亮基金
+      const firstCode = fundCodes[0];
+      const fundElement = fundRefs.current[firstCode];
+      
+      if (fundElement) {
+        console.log('[FundList] 滚动到基金:', firstCode);
+        fundElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      } else {
+        console.warn('[FundList] 未找到基金元素:', firstCode);
+      }
+    };
+    
+    window.addEventListener('scroll-to-fund', handleScrollToFund);
+    
+    return () => {
+      window.removeEventListener('scroll-to-fund', handleScrollToFund);
+    };
+  }, [funds]);
   
   // 处理筛选和排序变化
   const handleFilterChange = (newFilters) => {
@@ -253,12 +284,16 @@ const FundList = ({ onSelectFund }) => {
         </div>
         
         <div className="fund-list">
-          {funds.map((fund) => (
-            <div 
-            key={fund.id || fund.code} 
-            className={`fund-item ${selectedFund?.id === fund.id ? 'selected' : ''}`}
-            onClick={() => handleFundClick(fund)}
-          >
+          {funds.map((fund) => {
+            const isHighlighted = highlightedFundIds.includes(fund.code);
+            
+            return (
+              <div 
+                key={fund.id || fund.code} 
+                ref={(el) => { if (el) fundRefs.current[fund.code] = el; }}
+                className={`fund-item ${selectedFund?.id === fund.id ? 'selected' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                onClick={() => handleFundClick(fund)}
+              >
               <div className="fund-info">
                 <div className="fund-name">{fund.name}</div>
                 <div className="fund-code">{fund.code}</div>
@@ -271,7 +306,8 @@ const FundList = ({ onSelectFund }) => {
                 <div className="fund-category">{fund.category}</div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         
         {/* 分页控件 - 为未来连接金融数据库预留 */}

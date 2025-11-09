@@ -26,18 +26,55 @@ function App() {
     const handleBehaviorAISuggestion = (event) => {
       console.log('[App] 收到行为追踪AI建议:', event.detail);
       
-      const { suggestion, command, confidence } = event.detail;
+      const { suggestion, command, confidence, fund_id } = event.detail;
       
-      // 显示弹窗（完全由后端command控制）
-      ai.show({
-        content: suggestion,
-        source: 'behavior',
-        confidence: confidence
-      }, {}, {
-        autoShow: true,           // 行为追踪建议默认自动显示
-        autoHideDelay: 15000,     // 15秒后隐藏
-        speakEnabled: false
-      });
+      // 处理高亮命令
+      if (command === 'highlight' && fund_id) {
+        console.log('[App] 处理高亮命令, fund_id:', fund_id);
+        
+        // 解析fund_id（可能是单个或多个，逗号分隔）
+        const fundIds = typeof fund_id === 'string' 
+          ? fund_id.split(',').map(id => id.trim())
+          : Array.isArray(fund_id) ? fund_id : [fund_id];
+        
+        // 设置高亮基金ID
+        setHighlightedFundIds(fundIds);
+        
+        // 触发滚动事件（让FundList滚动到高亮基金）
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('scroll-to-fund', {
+            detail: { fundCodes: fundIds }
+          }));
+        }, 100);
+        
+        // 显示弹窗
+        ai.show({
+          content: suggestion,
+          source: 'behavior',
+          confidence: confidence
+        }, {}, {
+          autoShow: true,
+          autoHideDelay: 15000,
+          speakEnabled: false
+        });
+        
+        // 15秒后清除高亮（与弹窗同步）
+        setTimeout(() => {
+          setHighlightedFundIds([]);
+        }, 15000);
+        
+      } else {
+        // 普通弹窗（无高亮）
+        ai.show({
+          content: suggestion,
+          source: 'behavior',
+          confidence: confidence
+        }, {}, {
+          autoShow: true,
+          autoHideDelay: 15000,
+          speakEnabled: false
+        });
+      }
     };
     
     // 添加监听器
@@ -59,6 +96,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('home'); // 'home', 'account', 'transfer', 'financing', 'deposit', etc.
   const [financingTab, setFinancingTab] = useState('funds'); // 仅保留基金页
+  
+  // 高亮基金ID列表（用于AI推荐高亮）
+  const [highlightedFundIds, setHighlightedFundIds] = useState([]);
 
   const [currentSuggestionId, setCurrentSuggestionId] = useState('');
   const appRef = useRef(null);
@@ -147,8 +187,9 @@ function App() {
             </div>
             <div className="financing-content">
               <FundList 
-            onSelectFund={handleSelectFund}
-          />
+                onSelectFund={handleSelectFund}
+                highlightedFundIds={highlightedFundIds}
+              />
             </div>
           </div>
         );
