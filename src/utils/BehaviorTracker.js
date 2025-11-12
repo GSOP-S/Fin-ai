@@ -323,43 +323,28 @@ class BehaviorTracker {
     
     const result = await response.json();
     
-    // 如果服务器返回了AI建议，触发弹窗显示
+    // 如果服务器返回了AI建议，触发自定义事件（简化版本）
     if (result.success && result.data && result.data.ai_suggestion) {
-      this.handleAISuggestion(result.data.ai_suggestion);
+      this.triggerAISuggestionEvent(result.data.ai_suggestion);
     }
     
     return result;
   }
 
-  // 处理AI建议
-  handleAISuggestion(aiSuggestion) {
-    // 检查是否需要显示弹窗
-    const command = aiSuggestion.command || '';
-    
-    if (command === 'bubble' || command === 'yes') {
-      // 触发自定义事件，通知应用显示AI建议弹窗
-      const event = new CustomEvent('ai-suggestion-received', {
-        detail: {
-          suggestion: aiSuggestion.suggestion || '',
-          command: command,
-          confidence: aiSuggestion.confidence || 0,
-        }
-      });
-      window.dispatchEvent(event);
-      console.log('[BehaviorTracker] 已触发AI建议弹窗事件');
-    } else if (command === 'highlight') {
-      // 触发高亮事件（同时显示弹窗和高亮基金）
-      const event = new CustomEvent('ai-suggestion-received', {
-        detail: {
-          suggestion: aiSuggestion.suggestion || '',
-          command: command,
-          confidence: aiSuggestion.confidence || 0,
-          fund_id: aiSuggestion.fund_id || '',  // 单个或多个基金ID
-        }
-      });
-      window.dispatchEvent(event);
-      console.log('[BehaviorTracker] 已触发AI高亮+弹窗事件, fund_id:', aiSuggestion.fund_id);
-    }
+  // 触发AI建议事件（仅负责触发，不处理业务逻辑）
+  triggerAISuggestionEvent(aiSuggestion) {
+    // 不对command做任何处理，保持原始值（可能为null）
+    const event = new CustomEvent('ai-suggestion-received', {
+      detail: {
+        suggestion: aiSuggestion.suggestion || '',
+        command: aiSuggestion.command,  // 保持原始值，包括null
+        confidence: aiSuggestion.confidence || 0,
+        fund_id: aiSuggestion.fund_id || null,  // 如果有基金ID，传递给App.jsx处理
+        source: 'behavior'  // 标识数据来源
+      }
+    });
+    window.dispatchEvent(event);
+    console.log('[BehaviorTracker] 已触发AI建议事件:', aiSuggestion.command);
   }
   
   /**

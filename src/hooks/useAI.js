@@ -303,13 +303,12 @@ export function useAI(options = {}) {
   }, []);
   
   /**
-   * 分析用户行为日志并显示建议
-   * @param {string} userId - 用户ID
-   * @param {string} pageType - 页面类型(可选)
-   * @param {object} configOverrides - 配置覆盖
+   * 设置AI建议内容（仅用于设置状态，不包含业务逻辑）
+   * @param {object} suggestionData - 建议数据对象
+   * @param {object} config - 显示配置
    */
-  const analyzeAndShow = useCallback(async (userId, pageType = '', configOverrides = {}) => {
-    console.log(`[AI] 分析用户日志: userId=${userId}, pageType=${pageType}`);
+  const setAIContent = useCallback((suggestionData, config = {}) => {
+    console.log(`[AI] 设置AI内容:`, suggestionData);
     
     // 清除之前的定时器
     if (hideTimerRef.current) {
@@ -321,77 +320,40 @@ export function useAI(options = {}) {
       window.speechSynthesis.cancel();
     }
     
-    setIsLoading(true);
-    setError(null);
+    const text = suggestionData.suggestion || suggestionData.content || '暂无建议';
     
+    // 更新状态
+    setSuggestion(suggestionData);
+    setSuggestionText(text);
+    
+    // 获取配置
+    let displayConfig;
     try {
-      // 获取配置
-      let config;
+      displayConfig = getAIConfig('behavior', { ...options, ...config });
+    } catch (configError) {
+      console.error('AI配置获取失败:', configError);
+      displayConfig = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+    }
+    
+    // 显示逻辑由App.jsx控制，这里只更新状态
+    if (displayConfig.autoShow) {
+      setIsVisible(true);
+      
+      // 自动隐藏
+      if (displayConfig.autoHideDelay > 0) {
+        hideTimerRef.current = setTimeout(() => {
+          setIsVisible(false);
+        }, displayConfig.autoHideDelay);
+      }
+    }
+    
+    // 语音播报
+    if (displayConfig.speakEnabled && text) {
       try {
-        config = getAIConfig(pageType || 'home', { ...options, ...configOverrides });
-        console.log(`[AI] 配置:`, config);
-      } catch (configError) {
-        console.error('AI配置获取失败:', configError);
-        // 使用默认配置继续
-        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+        speak(text);
+      } catch (speechError) {
+        console.error('语音播报调用失败:', speechError);
       }
-      
-      // 调用日志分析API
-      const result = await analyzeUserLogs(userId, pageType);
-      console.log(`[AI] 日志分析结果:`, result);
-      
-      // 检查返回的command字段
-      const command = result.command || 'bubble';
-      const text = result.suggestion || '暂无建议';
-      
-      // 更新状态
-      setSuggestion(result);
-      setSuggestionText(text);
-      
-      // 根据command字段决定是否显示弹窗
-      if (command === 'yes' || command === 'bubble') {
-        console.log(`[AI] 显示建议弹窗: ${text}`);
-        setIsVisible(true);
-        
-        // 自动隐藏
-        if (config.autoHideDelay > 0) {
-          hideTimerRef.current = setTimeout(() => {
-            setIsVisible(false);
-          }, config.autoHideDelay);
-        }
-      } else if (command === 'highlight' && result.fund_id) {
-        console.log(`[AI] 高亮基金: ${result.fund_id}`);
-        // 这里可以添加高亮特定基金的逻辑
-        // 例如，通过事件或状态管理来通知其他组件高亮显示特定基金
-        setIsVisible(true);
-        
-        // 自动隐藏
-        if (config.autoHideDelay > 0) {
-          hideTimerRef.current = setTimeout(() => {
-            setIsVisible(false);
-          }, config.autoHideDelay);
-        }
-      } else {
-        console.log(`[AI] 不显示弹窗，command: ${command}`);
-        setIsVisible(false);
-      }
-      
-      // 语音播报
-      if (config.speakEnabled && text) {
-        try {
-          speak(text);
-        } catch (speechError) {
-          console.error('语音播报调用失败:', speechError);
-        }
-      }
-      
-      return result;
-    } catch (err) {
-      console.error('用户日志分析失败:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, [options, speak]);
   
@@ -423,7 +385,7 @@ export function useAI(options = {}) {
     speak,            // 语音播报
     toggleSpeech,     // 切换语音播报状态（从App.jsx迁移而来）
     stopSpeaking,     // 停止播报
-    analyzeAndShow,   // 分析用户日志并显示建议
+    setAIContent,     // 设置AI建议内容（简化版）
   };
 }
 

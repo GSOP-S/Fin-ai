@@ -47,12 +47,12 @@ function App() {
           }));
         }, 100);
         
-        // 显示弹窗
-        ai.show({
-          content: suggestion,
-          source: 'behavior',
+        // 显示弹窗（使用简化版的setAIContent）
+        ai.setAIContent({
+          suggestion,
+          command: 'bubble',
           confidence: confidence
-        }, {}, {
+        }, {
           autoShow: true,
           autoHideDelay: 15000,
           speakEnabled: false
@@ -65,11 +65,11 @@ function App() {
         
       } else {
         // 普通弹窗（无高亮）
-        ai.show({
-          content: suggestion,
-          source: 'behavior',
+        ai.setAIContent({
+          suggestion,
+          command: 'bubble',
           confidence: confidence
-        }, {}, {
+        }, {
           autoShow: true,
           autoHideDelay: 15000,
           speakEnabled: false
@@ -254,14 +254,47 @@ function App() {
   // 监听AI建议事件
   useEffect(() => {
     const handleAISuggestion = (event) => {
-      const { suggestion, command, confidence } = event.detail;
+      const { suggestion, command, confidence, fund_id } = event.detail;
       console.log('[App] 收到AI建议:', suggestion, command, confidence);
       
-      // 使用统一的AI状态管理显示建议
-      ai.show({
-        content: suggestion,
-        source: 'behavior',
-        confidence: confidence
+      // 检查command字段，如果为null或undefined则不做任何反应
+      if (command === null || command === undefined) {
+        console.log('[App] command为null/undefined，不处理AI建议');
+        return;
+      }
+      
+      // 处理高亮基金逻辑（如果command为highlight且有fund_id）
+      if (command === 'highlight' && fund_id) {
+        // 设置高亮基金ID
+        setHighlightedFundIds(Array.isArray(fund_id) ? fund_id : [fund_id]);
+        
+        // 如果是高亮命令，滚动到指定基金
+        if (Array.isArray(fund_id) && fund_id.length > 0) {
+          setTimeout(() => {
+            const scrollEvent = new CustomEvent('scroll-to-fund', {
+              detail: { fundId: fund_id[0] }
+            });
+            window.dispatchEvent(scrollEvent);
+          }, 100);
+        }
+        
+        // 15秒后清除高亮
+        setTimeout(() => {
+          setHighlightedFundIds([]);
+        }, 15000);
+        
+        console.log('[App] 已设置基金高亮:', fund_id);
+      }
+      
+      // 设置AI内容并显示弹窗
+      ai.setAIContent({
+        suggestion,
+        command: command || 'bubble',
+        confidence: confidence || 0
+      }, {
+        autoShow: true,
+        autoHideDelay: command === 'highlight' ? 8000 : 5000,
+        speakEnabled: false
       });
     };
 
