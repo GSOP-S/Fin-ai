@@ -16,22 +16,36 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 
-# 配置CORS - 允许常用的开发端口
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "http://localhost:3000",
-            "http://localhost:3001", 
-            "http://localhost:3002",
-            "http://localhost:3003",
-            "http://localhost:3004",
-            "http://localhost:5173"
-        ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": True
-    }
-})
+# 配置CORS - 根据环境动态配置
+flask_env = os.getenv('FLASK_ENV', 'development')
+if flask_env == 'production':
+    # 生产环境 - 允许所有来源
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "expose_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": False
+        }
+    })
+else:
+    # 开发环境 - 仅允许本地端口
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:3000",
+                "http://localhost:3001", 
+                "http://localhost:3002",
+                "http://localhost:3003",
+                "http://localhost:3004",
+                "http://localhost:5173"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "supports_credentials": True
+        }
+    })
 
 # 注册蓝图 - Controller层
 from controllers.bill_controller import bill_bp
