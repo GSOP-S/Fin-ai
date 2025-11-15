@@ -11,7 +11,8 @@ from services.news_service import (
     search_news,
     get_hot_news,
     record_news_read,
-    get_news_by_category_summary
+    get_news_by_category_summary,
+    create_news
 )
 
 # 创建Blueprint
@@ -152,4 +153,44 @@ def get_stats():
     summary = get_news_by_category_summary()
     
     return success_response(summary, message='获取统计信息成功')
+
+def _classify(category_label, title, content):
+    label = category_label or ''
+    text = f"{title}\n{content}" if content else title
+    if label in ['财经新闻', '市场行情', '政策解读', '理财知识']:
+        return label
+    kw_market = ['涨停', '股', '指数', '降价', '销量', '行情', '盘中', '收盘']
+    if any(k in text for k in kw_market):
+        return '市场行情'
+    kw_policy = ['政策', '讲话', '会议', '指导意见', '总书记']
+    if any(k in text for k in kw_policy):
+        return '政策解读'
+    kw_edu = ['科普', '入门', '理财', '指南']
+    if any(k in text for k in kw_edu):
+        return '理财知识'
+    return '财经新闻'
+
+
+@news_bp.route('/news', methods=['POST'])
+@handle_exceptions
+def create_news_item():
+    data = request.get_json() or {}
+    title = data.get('title', '').strip()
+    summary = data.get('summary', '').strip()
+    content = data.get('content', '').strip()
+    category_label = data.get('category', '').strip()
+    source = data.get('source', '').strip()
+    author = data.get('author', '').strip()
+    image_rel = data.get('image', '').strip()
+    tags = data.get('tags', '').strip() or None
+    from datetime import datetime
+    publish_time = data.get('publish_time') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    if not title or not summary:
+        return error_response('缺少标题或摘要', status_code=400)
+    category = _classify(category_label, title, content)
+    image_url = f"/assets/news/{image_rel}" if image_rel else None
+    news_id = create_news(title, summary, content, category, source or '来源不详', author or '作者不详', publish_time, image_url, tags, 0)
+    if not news_id:
+        return error_response('创建失败', status_code=500)
+    return success_response({'id': news_id}, message='创建资讯成功')
 

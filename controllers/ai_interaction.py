@@ -7,6 +7,11 @@ AI交互控制器
 from flask import Blueprint, request
 from utils.response import success_response, error_response, handle_exceptions
 from services.ai_service import AIService
+from services.home_suggestion_service import HomeSuggestionService
+from services.fund_service import FundService
+from services.bill_analysis_service import BillAnalysisService
+from services.transfer_suggestion_service import TransferSuggestionService
+from services.market_analysis_service import market_analysis_service
 
 ai_interaction_bp = Blueprint('ai_interaction', __name__)
 
@@ -23,56 +28,63 @@ def ai_interact():
     interaction_type = data.get('interaction_type')
     page_context = data.get('page_context', {})
 
-    if interaction_type == 'chat':
-        message = data.get('message', '')
-        history = data.get('history', [])  # 未使用但保留
-        context = page_context.get('data', {})
+    if interaction_type == 'chat' or data.get('prompt') is not None:
+        message = data.get('message') or data.get('prompt', '')
+        context = data.get('context', {}) or page_context.get('data', {})
         response_txt = ai_service.generate_ai_response(message, context)
-        return success_response({
-            'response': response_txt,
-            'interaction_type': 'chat'
-        })
+        return success_response({'response': response_txt, 'interaction_type': 'chat'})
 
-    elif interaction_type == 'suggestion':
-        page_type = page_context.get('page_type')
-        context = {
-            'userId': page_context.get('user_id'),
-            **page_context.get('data', {})
-        }
+    if interaction_type == 'suggestion':
+        page_type = page_context.get('page_type') or data.get('pageType')
+        context = {'userId': page_context.get('user_id'), **page_context.get('data', {}), **data.get('context', {})}
         if not page_type:
             return error_response(error='缺少页面类型参数', status_code=400)
-        suggestion = ai_service.get_page_suggestions(page_type, context)
-        return success_response({
-            'suggestion': suggestion,
-            'interaction_type': 'suggestion',
-            'page_type': page_type
-        })
+        if page_type == 'home':
+            result = HomeSuggestionService().generate_home_suggestion_from_context(context)
+        elif page_type == 'fund':
+            fund_data = context.get('fundData', {})
+            fund = {
+                'name': fund_data.get('fundName', ''),
+                'code': fund_data.get('fundCode', ''),
+                'category': fund_data.get('fundType', ''),
+                'risk': fund_data.get('riskLevel', ''),
+                'nav': fund_data.get('nav', 0),
+                'change': fund_data.get('change', ''),
+                'changePercent': fund_data.get('changePercent', ''),
+                'manager': fund_data.get('manager', '未知基金经理')
+            }
+            result = FundService().generate_fund_suggestion(fund)
+        elif page_type == 'bill':
+            result = BillAnalysisService().generate_bill_suggestion(context)
+        elif page_type == 'transfer':
+            result = TransferSuggestionService().generate_transfer_suggestion_from_context(context)
+        elif page_type == 'market':
+            result = market_analysis_service.generate_market_suggestion_from_context(context)
+        else:
+            return error_response(error=f'不支持的页面类型: {page_type}', status_code=400)
+        return success_response({'suggestion': result, 'interaction_type': 'suggestion', 'page_type': page_type})
 
-    elif interaction_type == 'analysis':
-        page_type = page_context.get('page_type')
-        context = page_context.get('data', {})
+    if interaction_type == 'analysis':
+        page_type = page_context.get('page_type') or data.get('pageType')
+        context = page_context.get('data', {}) or data.get('context', {})
         if not page_type:
             return error_response(error='缺少页面类型参数', status_code=400)
         if page_type == 'market':
-            analysis = ai_service.generate_market_analysis()
-        
+            analysis = market_analysis_service.get_market_overview()
         elif page_type == 'fund':
-            analysis = ai_service.generate_fund_suggestion(context.get('fund', {}))
+            fund = context.get('fund', {})
+            analysis = FundService().generate_fund_suggestion(fund)
         elif page_type == 'bill':
-            analysis = ai_service.generate_bill_suggestion({'billData': context})
+            analysis = BillAnalysisService().generate_bill_suggestion({'billData': context})
         elif page_type == 'transfer':
-            analysis = ai_service.generate_transfer_suggestion({'transferData': context})
+            analysis = TransferSuggestionService().generate_transfer_suggestion_from_context(context)
         elif page_type == 'home':
-            analysis = ai_service.generate_home_suggestion({'userId': page_context.get('user_id', '')})
+            analysis = HomeSuggestionService().generate_home_suggestion_from_context({'userId': page_context.get('user_id', '')})
         else:
             return error_response(error=f'不支持的页面类型: {page_type}', status_code=400)
-        return success_response({
-            'analysis': analysis,
-            'interaction_type': 'analysis',
-            'page_type': page_type
-        })
-    else:
-        return error_response(error=f'不支持的交互类型: {interaction_type}', status_code=400)
+        return success_response({'analysis': analysis, 'interaction_type': 'analysis', 'page_type': page_type})
+
+    return error_response(error=f'不支持的交互类型: {interaction_type}', status_code=400)
 
 # AI反馈接口
 @ai_interaction_bp.route('/api/ai/feedback', methods=['POST'])

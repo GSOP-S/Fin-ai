@@ -2,7 +2,7 @@
 // 通用 HTTP 请求封装，基于浏览器 fetch API
 // 使用示例：
 // import request from './request';
-// const data = await request('/api/funds');
+// const data = await request.get('/api/funds');
 
 import { API_CONFIG } from '../config/api.config';
 
@@ -15,7 +15,7 @@ const BASE_URL = API_CONFIG.baseURL // 使用API_CONFIG中的baseURL
  * @returns {Promise<any>} data 字段
  * @throws Error 当 success false 或网络失败
  */
-export default async function request(url, options = {}) {
+async function request(url, options = {}) {
   const response = await fetch(`${BASE_URL}${url}`, {
     headers: {
       'Content-Type': 'application/json',
@@ -41,3 +41,30 @@ export default async function request(url, options = {}) {
 
   return result; // 返回完整结果，包含 data / pagination 等
 }
+
+// 添加常用的 HTTP 方法
+request.get = (url, options = {}) => {
+  return request(url, { method: 'GET', ...options });
+};
+
+request.post = (url, data, options = {}) => {
+  return request(url, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    ...options,
+  });
+};
+
+request.put = (url, data, options = {}) => {
+  return request(url, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    ...options,
+  });
+};
+
+request.delete = (url, options = {}) => {
+  return request(url, { method: 'DELETE', ...options });
+};
+
+export default request;

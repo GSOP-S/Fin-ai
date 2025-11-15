@@ -17,7 +17,7 @@ function HomePage({ onNavigate, user }) {
   }, [user?.id, tracker]);
   // 模拟用户账户信息
   const accountInfo = {
-    balance: '566588.66',
+    balance: '673600.50',
     accountNumber: '6222 **** **** 5678',
     userName: user?.displayName || '张三',
     todayIncome: '12.35'

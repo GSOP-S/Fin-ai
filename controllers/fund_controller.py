@@ -29,23 +29,3 @@ def fund_detail_api(fund_code):
     if not detail:
         return error_response(error='NOT_FOUND', message='未找到对应基金', status_code=404)
     return success_response(detail, message='获取基金详情成功')
-
-
-@fund_bp.route('/fund-suggestion', methods=['GET'])
-@handle_exceptions
-def fund_suggestion_api():
-    """获取基金建议API"""
-    fund_code = request.args.get('code')
-    if not fund_code:
-        return error_response(error='INVALID_PARAMS', message='缺少基金代码参数', status_code=400)
-    
-    # 获取基金详情
-    fund = get_fund_details(fund_code)
-    if not fund:
-        return error_response(error='NOT_FOUND', message='未找到对应基金', status_code=404)
-    
-    # 生成基金建议
-    fund_service = FundService()
-    suggestion = fund_service.generate_fund_suggestion(fund)
-    
-    return success_response(suggestion, message='获取基金建议成功')

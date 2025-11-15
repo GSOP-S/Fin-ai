@@ -69,6 +69,11 @@ def mock_demo_page():
     """提供Mock演示页面"""
     return send_from_directory('.', 'mock_demo.html')
 
+# 静态资讯图片路由（从前端 src/figure 目录提供）
+@app.route('/assets/news/<path:filename>')
+def serve_news_image(filename):
+    return send_from_directory('src/figure', filename)
+
 # 健康检查接口
 @app.route('/health', methods=['GET'])
 def health_check():

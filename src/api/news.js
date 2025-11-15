@@ -15,14 +15,15 @@ import { API_ENDPOINTS } from '../config/api.config';
  */
 export const getNewsList = async (params = {}) => {
   try {
-    const response = await request.get(API_ENDPOINTS.news.list, { params });
-    
-    if (response.success) {
-      return response.data || [];
-    } else {
-      console.error('获取资讯列表失败:', response.message);
-      return [];
+    const url = API_ENDPOINTS.news.list;
+    const query = new URLSearchParams(params).toString();
+    const resp = await request(`${url}${query ? `?${query}` : ''}`);
+    if (resp.success) {
+      const data = resp.data || {};
+      return data.list || [];
     }
+    console.error('获取资讯列表失败:', resp.message);
+    return [];
   } catch (error) {
     console.error('获取资讯列表异常:', error);
     return [];
@@ -37,19 +38,15 @@ export const getNewsList = async (params = {}) => {
  */
 export const searchNews = async (keyword, params = {}) => {
   try {
-    const response = await request.get(API_ENDPOINTS.news.search, {
-      params: {
-        keyword,
-        ...params
-      }
-    });
-    
-    if (response.success) {
-      return response.data || [];
-    } else {
-      console.error('搜索资讯失败:', response.message);
-      return [];
+    const url = API_ENDPOINTS.news.search;
+    const query = new URLSearchParams({ keyword, ...params }).toString();
+    const resp = await request(`${url}?${query}`);
+    if (resp.success) {
+      const data = resp.data || {};
+      return data.list || [];
     }
+    console.error('搜索资讯失败:', resp.message);
+    return [];
   } catch (error) {
     console.error('搜索资讯异常:', error);
     return [];
@@ -64,14 +61,12 @@ export const searchNews = async (keyword, params = {}) => {
 export const getNewsDetail = async (id) => {
   try {
     const url = API_ENDPOINTS.news.detail.replace(':id', id);
-    const response = await request.get(url);
-    
-    if (response.success) {
-      return response.data;
-    } else {
-      console.error('获取资讯详情失败:', response.message);
-      return null;
+    const resp = await request(url);
+    if (resp.success) {
+      return resp;
     }
+    console.error('获取资讯详情失败:', resp.message);
+    return null;
   } catch (error) {
     console.error('获取资讯详情异常:', error);
     return null;
@@ -86,9 +81,8 @@ export const getNewsDetail = async (id) => {
 export const increaseReadCount = async (id) => {
   try {
     const url = API_ENDPOINTS.news.read.replace(':id', id);
-    const response = await request.post(url);
-    
-    return response.success;
+    const resp = await request(url, { method: 'POST' });
+    return !!resp.success;
   } catch (error) {
     console.error('增加阅读量失败:', error);
     return false;
@@ -102,16 +96,15 @@ export const increaseReadCount = async (id) => {
  */
 export const getHotNews = async (limit = 10) => {
   try {
-    const response = await request.get(API_ENDPOINTS.news.hot, {
-      params: { limit }
-    });
-    
-    if (response.success) {
-      return response.data || [];
-    } else {
-      console.error('获取热门资讯失败:', response.message);
-      return [];
+    const url = API_ENDPOINTS.news.hot;
+    const query = new URLSearchParams({ limit }).toString();
+    const resp = await request(`${url}?${query}`);
+    if (resp.success) {
+      const data = resp.data || {};
+      return data.list || [];
     }
+    console.error('获取热门资讯失败:', resp.message);
+    return [];
   } catch (error) {
     console.error('获取热门资讯异常:', error);
     return [];

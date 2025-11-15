@@ -10,6 +10,7 @@ import TransferPage from './components/TransferPage';
 import AssetPage from './components/AssetPage';
 import BillDetail from './components/BillDetail';
 import NewsPage from './components/NewsPage';
+import NewsTest from './components/NewsTest';
 import { generateAIResponse, generateAISuggestion } from './api/ai';
 import { submitFeedback } from './api/feedback';
 import { showFundSuggestion } from './api/fund';
@@ -235,6 +236,9 @@ function App() {
       
       case 'news':
         return <NewsPage onNavigate={handleNavigate} />;
+      
+      case 'news-test':
+        return <NewsTest onNavigate={handleNavigate} />;
       
       default:
         // 其他页面暂时返回提示信息

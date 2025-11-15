@@ -4,6 +4,7 @@
 """
 
 from utils.db import get_db_connection
+from pymysql.cursors import DictCursor
 
 
 def get_all_news(category=None, limit=None, offset=0):
@@ -20,7 +21,7 @@ def get_all_news(category=None, limit=None, offset=0):
     """
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor=DictCursor) as cursor:
             if category:
                 sql = '''
                 SELECT id, title, summary, content, category, source, author, 
@@ -50,18 +51,18 @@ def get_all_news(category=None, limit=None, offset=0):
             news_list = []
             for row in results:
                 news_list.append({
-                    'id': row[0],
-                    'title': row[1],
-                    'summary': row[2],
-                    'content': row[3],
-                    'category': row[4],
-                    'source': row[5],
-                    'author': row[6],
-                    'publish_time': row[7].strftime('%Y-%m-%d %H:%M:%S') if row[7] else None,
-                    'image_url': row[8],
-                    'tags': row[9],
-                    'read_count': row[10],
-                    'created_at': row[11].strftime('%Y-%m-%d %H:%M:%S') if row[11] else None
+                    'id': row['id'],
+                    'title': row['title'],
+                    'summary': row['summary'],
+                    'content': row['content'],
+                    'category': row['category'],
+                    'source': row['source'],
+                    'author': row['author'],
+                    'publish_time': row['publish_time'].strftime('%Y-%m-%d %H:%M:%S') if row['publish_time'] else None,
+                    'image_url': row['image_url'],
+                    'tags': row['tags'],
+                    'read_count': row['read_count'],
+                    'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M:%S') if row['created_at'] else None
                 })
             
             return news_list
@@ -81,7 +82,7 @@ def get_news_by_id(news_id):
     """
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor=DictCursor) as cursor:
             sql = '''
             SELECT id, title, summary, content, category, source, author, 
                    publish_time, image_url, tags, read_count, created_at
@@ -93,18 +94,18 @@ def get_news_by_id(news_id):
             
             if row:
                 return {
-                    'id': row[0],
-                    'title': row[1],
-                    'summary': row[2],
-                    'content': row[3],
-                    'category': row[4],
-                    'source': row[5],
-                    'author': row[6],
-                    'publish_time': row[7].strftime('%Y-%m-%d %H:%M:%S') if row[7] else None,
-                    'image_url': row[8],
-                    'tags': row[9],
-                    'read_count': row[10],
-                    'created_at': row[11].strftime('%Y-%m-%d %H:%M:%S') if row[11] else None
+                    'id': row['id'],
+                    'title': row['title'],
+                    'summary': row['summary'],
+                    'content': row['content'],
+                    'category': row['category'],
+                    'source': row['source'],
+                    'author': row['author'],
+                    'publish_time': row['publish_time'].strftime('%Y-%m-%d %H:%M:%S') if row['publish_time'] else None,
+                    'image_url': row['image_url'],
+                    'tags': row['tags'],
+                    'read_count': row['read_count'],
+                    'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M:%S') if row['created_at'] else None
                 }
             return None
     finally:
@@ -123,7 +124,7 @@ def search_news(keyword):
     """
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor=DictCursor) as cursor:
             sql = '''
             SELECT id, title, summary, content, category, source, author, 
                    publish_time, image_url, tags, read_count, created_at
@@ -138,18 +139,18 @@ def search_news(keyword):
             news_list = []
             for row in results:
                 news_list.append({
-                    'id': row[0],
-                    'title': row[1],
-                    'summary': row[2],
-                    'content': row[3],
-                    'category': row[4],
-                    'source': row[5],
-                    'author': row[6],
-                    'publish_time': row[7].strftime('%Y-%m-%d %H:%M:%S') if row[7] else None,
-                    'image_url': row[8],
-                    'tags': row[9],
-                    'read_count': row[10],
-                    'created_at': row[11].strftime('%Y-%m-%d %H:%M:%S') if row[11] else None
+                    'id': row['id'],
+                    'title': row['title'],
+                    'summary': row['summary'],
+                    'content': row['content'],
+                    'category': row['category'],
+                    'source': row['source'],
+                    'author': row['author'],
+                    'publish_time': row['publish_time'].strftime('%Y-%m-%d %H:%M:%S') if row['publish_time'] else None,
+                    'image_url': row['image_url'],
+                    'tags': row['tags'],
+                    'read_count': row['read_count'],
+                    'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M:%S') if row['created_at'] else None
                 })
             
             return news_list
@@ -169,7 +170,7 @@ def get_hot_news(limit=10):
     """
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor=DictCursor) as cursor:
             sql = '''
             SELECT id, title, summary, content, category, source, author, 
                    publish_time, image_url, tags, read_count, created_at
@@ -183,18 +184,18 @@ def get_hot_news(limit=10):
             news_list = []
             for row in results:
                 news_list.append({
-                    'id': row[0],
-                    'title': row[1],
-                    'summary': row[2],
-                    'content': row[3],
-                    'category': row[4],
-                    'source': row[5],
-                    'author': row[6],
-                    'publish_time': row[7].strftime('%Y-%m-%d %H:%M:%S') if row[7] else None,
-                    'image_url': row[8],
-                    'tags': row[9],
-                    'read_count': row[10],
-                    'created_at': row[11].strftime('%Y-%m-%d %H:%M:%S') if row[11] else None
+                    'id': row['id'],
+                    'title': row['title'],
+                    'summary': row['summary'],
+                    'content': row['content'],
+                    'category': row['category'],
+                    'source': row['source'],
+                    'author': row['author'],
+                    'publish_time': row['publish_time'].strftime('%Y-%m-%d %H:%M:%S') if row['publish_time'] else None,
+                    'image_url': row['image_url'],
+                    'tags': row['tags'],
+                    'read_count': row['read_count'],
+                    'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M:%S') if row['created_at'] else None
                 })
             
             return news_list
@@ -235,16 +236,41 @@ def get_news_count(category=None):
     """
     conn = get_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor=DictCursor) as cursor:
             if category:
-                sql = 'SELECT COUNT(*) FROM News WHERE category = %s'
+                sql = 'SELECT COUNT(*) as count FROM News WHERE category = %s'
                 cursor.execute(sql, [category])
             else:
-                sql = 'SELECT COUNT(*) FROM News'
+                sql = 'SELECT COUNT(*) as count FROM News'
                 cursor.execute(sql)
             
             result = cursor.fetchone()
-            return result[0] if result else 0
+            return result['count'] if result else 0
+    finally:
+        conn.close()
+
+
+def insert_news_item(title, summary, content, category, source, author, publish_time, image_url=None, tags=None, read_count=0):
+    """
+    插入一条资讯记录（若标题已存在则忽略）
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 检查是否已存在同标题记录
+            check_sql = 'SELECT id FROM News WHERE title = %s LIMIT 1'
+            cursor.execute(check_sql, [title])
+            exists = cursor.fetchone()
+            if exists:
+                return exists[0]
+
+            insert_sql = '''
+            INSERT INTO News (title, summary, content, category, source, author, publish_time, image_url, tags, read_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            '''
+            cursor.execute(insert_sql, [title, summary, content, category, source, author, publish_time, image_url, tags, read_count])
+            conn.commit()
+            return cursor.lastrowid
     finally:
         conn.close()
 

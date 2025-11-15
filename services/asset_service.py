@@ -342,4 +342,3 @@ class AssetService:
         except Exception as e:
             logger.error(f"计算持有天数失败: {str(e)}")
             return 0
-    

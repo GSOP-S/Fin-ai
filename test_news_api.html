@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻API测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .news-item {
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .news-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .news-summary {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .news-meta {
+            font-size: 14px;
+            color: #888;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>新闻API测试</h1>
+    <div id="news-container" class="loading">加载中...</div>
+
+    <script>
+        async function fetchNews() {
+            try {
+                const response = await fetch('/api/news');
+                const data = await response.json();
+                
+                const container = document.getElementById('news-container');
+                
+                if (data.success && data.data && data.data.list) {
+                    container.innerHTML = '';
+                    
+                    if (data.data.list.length === 0) {
+                        container.innerHTML = '<p>暂无新闻数据</p>';
+                        return;
+                    }
+                    
+                    data.data.list.forEach(news => {
+                        const newsItem = document.createElement('div');
+                        newsItem.className = 'news-item';
+                        
+                        newsItem.innerHTML = `
+                            <div class="news-title">${news.title}</div>
+                            <div class="news-summary">${news.summary}</div>
+                            <div class="news-meta">
+                                <span>来源: ${news.source}</span> | 
+                                <span>作者: ${news.author}</span> | 
+                                <span>分类: ${news.category}</span> | 
+                                <span>阅读量: ${news.read_count || 0}</span>
+                            </div>
+                        `;
+                        
+                        container.appendChild(newsItem);
+                    });
+                } else {
+                    container.innerHTML = `<div class="error">获取新闻失败: ${data.message || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                const container = document.getElementById('news-container');
+                container.innerHTML = `<div class="error">请求出错: ${error.message}</div>`;
+                console.error('获取新闻出错:', error);
+            }
+        }
+        
+        // 页面加载完成后获取新闻
+        document.addEventListener('DOMContentLoaded', fetchNews);
+    </script>
+</body>
+</html>

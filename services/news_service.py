@@ -9,8 +9,10 @@ from mapper.news_mapper import (
     search_news as mapper_search_news,
     get_hot_news as mapper_get_hot_news,
     increase_read_count as mapper_increase_read_count,
-    get_news_count
+    get_news_count,
+    insert_news_item
 )
+import os
 
 
 def get_news_list(category=None, page=1, page_size=20):
@@ -71,7 +73,28 @@ def get_news_detail(news_id):
         dict: 资讯详情，不存在返回None
     """
     try:
-        return get_news_by_id(news_id)
+        detail = get_news_by_id(news_id)
+        if not detail:
+            return None
+        images = []
+        image_url = detail.get('image_url')
+        if image_url:
+            prefix = '/assets/news/'
+            rel = image_url[len(prefix):] if image_url.startswith(prefix) else image_url.strip('/')
+            parts = rel.split('/')
+            folder = parts[0] if parts else ''
+            if folder:
+                base_dir = os.path.join('src', 'figure', folder)
+                if os.path.isdir(base_dir):
+                    for name in sorted(os.listdir(base_dir)):
+                        lower = name.lower()
+                        if lower.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                            images.append(f"/assets/news/{folder}/{name}")
+        if images:
+            detail['images'] = images
+        else:
+            detail['images'] = [image_url] if image_url else []
+        return detail
     except Exception as e:
         print(f'获取资讯详情失败: {e}')
         return None
@@ -150,4 +173,15 @@ def get_news_by_category_summary():
     except Exception as e:
         print(f'获取资讯分类统计失败: {e}')
         return {}
+
+
+def create_news(title, summary, content, category, source, author, publish_time, image_url=None, tags=None, read_count=0):
+    """
+    创建资讯记录（若存在同标题则返回已存在ID）
+    """
+    try:
+        return insert_news_item(title, summary, content, category, source, author, publish_time, image_url, tags, read_count)
+    except Exception as e:
+        print(f'创建资讯失败: {e}')
+        return None
 

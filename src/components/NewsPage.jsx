@@ -4,6 +4,7 @@ import { getNewsList } from '../api/news';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
 import { EventTypes } from '../config/tracking.config';
+import NewsDetail from './NewsDetail';
 
 function NewsPage({ onNavigate }) {
   // ===== 行为追踪 =====
@@ -15,6 +16,8 @@ function NewsPage({ onNavigate }) {
   const [currentCategory, setCurrentCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredNews, setFilteredNews] = useState([]);
+  const [selectedNewsId, setSelectedNewsId] = useState(null);
+  const assetBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
   
   // 用于防抖搜索追踪
   const searchTimeoutRef = useRef(null);
@@ -116,120 +119,133 @@ function NewsPage({ onNavigate }) {
 
   return (
     <div className="news-page">
-      {/* 搜索栏 */}
-      <div className="news-search-bar">
-        <div className="search-input-wrapper">
-          <span className="search-icon">🔍</span>
-          <input 
-            type="text" 
-            className="search-input" 
-            placeholder="搜索资讯标题或内容..."
-            value={searchQuery}
-            onChange={handleSearch}
-          />
-          {searchQuery && (
-            <span 
-              className="clear-icon" 
-              onClick={() => setSearchQuery('')}
-            >
-              ×
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* 分类标签 */}
-      <div className="news-categories">
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            className={`category-btn ${currentCategory === cat.id ? 'active' : ''}`}
-            onClick={() => {
-              tracker.track(EventTypes.NEWS_CATEGORY, {
-                from_category: currentCategory,
-                to_category: cat.id,
-                category_name: cat.name,
-              });
-              setCurrentCategory(cat.id);
-            }}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      {/* 资讯列表 */}
-      <div className="news-list-container">
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>加载中...</p>
+      {/* 如果有选中的资讯ID，显示详情页面 */}
+      {selectedNewsId ? (
+        <NewsDetail 
+          newsId={selectedNewsId} 
+          onBack={() => setSelectedNewsId(null)} 
+        />
+      ) : (
+        <>
+          {/* 搜索栏 */}
+          <div className="news-search-bar">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input 
+                type="text" 
+                className="search-input" 
+                placeholder="搜索资讯标题或内容..."
+                value={searchQuery}
+                onChange={handleSearch}
+              />
+              {searchQuery && (
+                <span 
+                  className="clear-icon" 
+                  onClick={() => setSearchQuery('')}
+                >
+                  ×
+                </span>
+              )}
+            </div>
           </div>
-        ) : filteredNews.length === 0 ? (
-          <div className="empty-state">
-            <span className="empty-icon">📰</span>
-            <p>暂无相关资讯</p>
-          </div>
-        ) : (
-          <div className="news-cards">
-            {filteredNews.map((news) => (
-              <div 
-                key={news.id} 
-                className="news-card"
+
+          {/* 分类标签 */}
+          <div className="news-categories">
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                className={`category-btn ${currentCategory === cat.id ? 'active' : ''}`}
                 onClick={() => {
-                  // 追踪阅读资讯（重点追踪 - 实时上报）
-                  tracker.track(EventTypes.NEWS_READ, {
-                    news_id: news.id,
-                    news_title: news.title,
-                    news_category: news.category,
-                    news_source: news.source,
-                    news_author: news.author,
-                    read_count: news.read_count,
-                    has_image: !!news.image_url,
-                    current_search_query: searchQuery,
-                    current_category: currentCategory,
-                  }, { realtime: true }); // 实时上报
+                  tracker.track(EventTypes.NEWS_CATEGORY, {
+                    from_category: currentCategory,
+                    to_category: cat.id,
+                    category_name: cat.name,
+                  });
+                  setCurrentCategory(cat.id);
                 }}
               >
-                {news.image_url && (
-                  <div className="news-image">
-                    <img src={news.image_url} alt={news.title} />
-                  </div>
-                )}
-                <div className="news-card-content">
-                  <div className="news-card-header">
-                    <span 
-                      className="news-category-tag"
-                      style={{ backgroundColor: getCategoryColor(news.category) }}
-                    >
-                      {news.category}
-                    </span>
-                    <span className="news-source">{news.source}</span>
-                  </div>
-                  <h3 className="news-card-title">{news.title}</h3>
-                  <p className="news-card-summary">{news.summary}</p>
-                  <div className="news-card-footer">
-                    <div className="news-meta">
-                      <span className="news-author">👤 {news.author}</span>
-                      <span className="news-time">🕐 {formatTime(news.publish_time)}</span>
-                    </div>
-                    <div className="news-stats">
-                      <span className="read-count">👁 {news.read_count || 0}</span>
-                    </div>
-                  </div>
-                  {news.tags && news.tags.length > 0 && (
-                    <div className="news-tags">
-                      {news.tags.split(',').slice(0, 3).map((tag, index) => (
-                        <span key={index} className="news-tag">#{tag.trim()}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                {cat.name}
+              </button>
             ))}
           </div>
-        )}
-      </div>
+
+          {/* 资讯列表 */}
+          <div className="news-list-container">
+            {loading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>加载中...</p>
+              </div>
+            ) : filteredNews.length === 0 ? (
+              <div className="empty-state">
+                <span className="empty-icon">📰</span>
+                <p>暂无相关资讯</p>
+              </div>
+            ) : (
+              <div className="news-cards">
+                {filteredNews.map((news) => (
+                  <div 
+                    key={news.id} 
+                    className="news-card"
+                    onClick={() => {
+                      // 追踪阅读资讯（重点追踪 - 实时上报）
+                      tracker.track(EventTypes.NEWS_READ, {
+                        news_id: news.id,
+                        news_title: news.title,
+                        news_category: news.category,
+                        news_source: news.source,
+                        news_author: news.author,
+                        read_count: news.read_count,
+                        has_image: !!news.image_url,
+                        current_search_query: searchQuery,
+                        current_category: currentCategory,
+                      }, { realtime: true }); // 实时上报
+                      
+                      // 导航到资讯详情页面
+                      setSelectedNewsId(news.id);
+                    }}
+                  >
+                    {news.image_url && (
+                      <div className="news-image">
+                        <img src={`${assetBase}${news.image_url}`} alt={news.title} />
+                      </div>
+                    )}
+                    <div className="news-card-content">
+                      <div className="news-card-header">
+                        <span 
+                          className="news-category-tag"
+                          style={{ backgroundColor: getCategoryColor(news.category) }}
+                        >
+                          {news.category}
+                        </span>
+                        <span className="news-source">{news.source}</span>
+                      </div>
+                      <h3 className="news-card-title">{news.title}</h3>
+                      <p className="news-card-summary">{news.summary}</p>
+                      <div className="news-card-footer">
+                        <div className="news-meta">
+                          <span className="news-author">👤 {news.author}</span>
+                          <span className="news-time">🕐 {formatTime(news.publish_time)}</span>
+                        </div>
+                        <div className="news-stats">
+                          <span className="read-count">👁 {news.read_count || 0}</span>
+                        </div>
+                      </div>
+                      {news.tags && news.tags.length > 0 && (
+                        <div className="news-tags">
+                          {news.tags.split(',').slice(0, 3).map((tag, index) => (
+                            <span key={index} className="news-tag">#{tag.trim()}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
