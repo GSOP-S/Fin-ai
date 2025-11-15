@@ -4,7 +4,7 @@
 """
 
 from mapper.bill_mapper import BillMapper
-from typing import Dict, List
+from typing import Dict, List, Optional
 import os
 
 
@@ -52,7 +52,9 @@ class BillAnalysisService:
             'summary': summary,
             'categoryDistribution': category_distribution,
             'abnormalTransactions': abnormal_transactions,
-            'suggestions': suggestions
+            'suggestions': suggestions,
+            'categories': category_distribution,  # 添加categories字段，与前端期望一致
+            'abnormalItems': abnormal_transactions  # 添加abnormalItems字段，与前端期望一致
         }
     
     def _calculate_summary(self, bills: List[Dict]) -> Dict:
@@ -154,7 +156,44 @@ class BillAnalysisService:
         
         return suggestions[:5]  # 最多返回5条建议
     
-    def _call_ai_model(self, summary: Dict, categories: List[Dict], bills: List[Dict]) -> str:
+    def generate_bill_suggestion(self, context: Dict) -> Dict:
+        """
+        生成账单分析和建议
+        
+        Args:
+            context: 包含账单数据的上下文
+        Returns:
+            账单分析和建议
+        """
+        bill_data = context.get('billData', {})
+        if not bill_data:
+            return {'suggestion': '暂无账单数据，无法生成分析'}
+        
+        # 从bill_data中提取数据，构建summary
+        summary = {
+            'savingRate': bill_data.get('savingRate', 0),
+            'transactionCount': bill_data.get('transactionCount', 0)
+        }
+        
+        # 获取类别和异常项
+        categories = bill_data.get('categories', [])
+        abnormal = bill_data.get('abnormalItems', [])
+        
+        # 使用内部方法生成建议
+        suggestions = self._generate_suggestions(summary, categories, abnormal)
+        suggestion_text = '\n'.join(suggestions)
+        
+        return {
+            'suggestion': suggestion_text,
+            'analysis': {
+                'suggestions': suggestions,
+                'savingRate': summary['savingRate'],
+                'categories': categories,
+                'abnormalItems': abnormal
+            }
+        }
+
+    def _call_ai_model(self, summary: Dict, categories: List[Dict], bills: List[Dict]) -> Optional[str]:
         """
         调用大模型API生成智能分析，失败时返回 None
         """

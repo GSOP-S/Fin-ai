@@ -31,6 +31,17 @@ class FundMapper:
         return db_query(query, (fund_code,), fetch_one=True)
 
     @staticmethod
+    def get_fund_by_code(fund_code: str) -> Optional[Dict]:
+        """根据基金代码获取基金信息（与get_fund_details方法相同）
+
+        Args:
+            fund_code: 基金代码
+        Returns:
+            基金信息字典，若不存在返回 None
+        """
+        return FundMapper.get_fund_details(fund_code)
+
+    @staticmethod
     def get_funds(
         page: int = 1,
         page_size: int = 20,

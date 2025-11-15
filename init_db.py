@@ -6,10 +6,10 @@ import os
 load_dotenv()
 
 # 数据库连接信息
-DB_HOST = os.getenv('MYSQL_HOST')
-DB_USER = os.getenv('MYSQL_USER')
-DB_PASSWORD = os.getenv('MYSQL_PASSWORD')
-DB_PORT = int(os.getenv('MYSQL_PORT', 3306))
+DB_HOST = os.getenv('DB_HOST')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_PORT = int(os.getenv('DB_PORT', 3306))
 
 # 连接到MySQL服务器
 conn = pymysql.connect(
@@ -22,16 +22,9 @@ conn = pymysql.connect(
 
 try:
     with conn.cursor() as cursor:
-        # 获取数据库名称（支持 Railway 和本地）
-        db_name = os.getenv('MYSQL_DATABASE', 'Fin')
-        
-        # 如果是本地环境且数据库不存在，则创建
-        if db_name == 'Fin':
-            cursor.execute('CREATE DATABASE IF NOT EXISTS Fin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
-        
-        # 使用指定的数据库
-        cursor.execute(f'USE {db_name}')
-        print(f'[OK] Using database: {db_name}')
+        # 创建数据库
+        cursor.execute('CREATE DATABASE IF NOT EXISTS Fin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')
+        cursor.execute('USE Fin')
 
         # 创建Users表
         cursor.execute('''
@@ -40,25 +33,10 @@ try:
             password VARCHAR(50) NOT NULL,
             display_name VARCHAR(100) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        )
         ''')
-        print('[OK] Users table created')
 
-        # 创建Stocks表
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Stocks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            code VARCHAR(20) NOT NULL UNIQUE,
-            industry VARCHAR(50) NOT NULL,
-            market_cap VARCHAR(50) NOT NULL,
-            pe VARCHAR(20) NOT NULL,
-            recent_performance VARCHAR(100) NOT NULL,
-            volatility VARCHAR(20) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ''')
-        print('[OK] Stocks table created')
+        
 
         # 创建Fundings表
         cursor.execute('''
@@ -73,9 +51,8 @@ try:
             risk VARCHAR(20) NOT NULL,
             manager VARCHAR(50) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        )
         ''')
-        print('[OK] Fundings table created')
 
         # 创建AI建议表
         cursor.execute('''
@@ -86,9 +63,8 @@ try:
             content JSON NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY page_type_suggestion_type (page_type, suggestion_type)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        )
         ''')
-        print('[OK] AISuggestions table created')
 
         # 创建用户AI交互记录表
         cursor.execute('''
@@ -99,14 +75,13 @@ try:
             action_type VARCHAR(50) NOT NULL,
             suggestion_id INT,
             action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_user_id (user_id),
-            INDEX idx_suggestion_id (suggestion_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            FOREIGN KEY (user_id) REFERENCES Users(user_id),
+            FOREIGN KEY (suggestion_id) REFERENCES AISuggestions(id)
+        )
         ''')
-        print('[OK] UserAIActions table created')
         
         # 创建Bills表（账单表）
-        print('[INFO] Creating Bills table...')
+        print('创建Bills表...')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS Bills (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -119,13 +94,14 @@ try:
             status VARCHAR(20) DEFAULT 'completed',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_user_date (user_id, transaction_date),
-            INDEX idx_category (category)
+            INDEX idx_category (category),
+            FOREIGN KEY (user_id) REFERENCES Users(user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
-        print('[OK] Bills table created')
+        print('✓ Bills表创建成功')
         
         # 创建TransferHistory表（转账历史表）
-        print('[INFO] Creating TransferHistory table...')
+        print('创建TransferHistory表...')
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS TransferHistory (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -138,10 +114,34 @@ try:
             status VARCHAR(20) DEFAULT 'completed',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_user_recipient (user_id, recipient_account),
-            INDEX idx_transfer_date (transfer_date)
+            INDEX idx_transfer_date (transfer_date),
+            FOREIGN KEY (user_id) REFERENCES Users(user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ''')
-        print('[OK] TransferHistory table created')
+        print('✓ TransferHistory表创建成功')
+        
+        # 创建News表（资讯表）
+        print('创建News表...')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS News (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            summary TEXT NOT NULL,
+            content TEXT,
+            category VARCHAR(50) NOT NULL,
+            source VARCHAR(100) NOT NULL,
+            author VARCHAR(100) NOT NULL,
+            publish_time DATETIME NOT NULL,
+            image_url VARCHAR(500),
+            tags VARCHAR(200),
+            read_count INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_category (category),
+            INDEX idx_publish_time (publish_time),
+            INDEX idx_read_count (read_count)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ''')
+        print('✓ News表创建成功')
 
         # 插入初始用户数据
         cursor.execute('''
@@ -149,21 +149,7 @@ try:
         ('UTSZ', 'admin', 'UTSZ用户')
         ''')
 
-        # 插入初始股票数据
-        stock_data = [
-            ('贵州茅台', '600519', '白酒', '2.5万亿', '30.5', '连续3个月上涨', '低'),
-            ('五粮液', '000858', '白酒', '9000亿', '25.2', '震荡上行', '中等'),
-            ('宁德时代', '300750', '新能源', '1.2万亿', '45.8', '波动较大', '高'),
-            ('腾讯控股', '00700', '互联网', '3万亿', '18.5', '稳步回升', '中等'),
-            ('阿里巴巴', '9988', '互联网', '2.8万亿', '15.2', '底部企稳', '中等'),
-            ('美团-W', '03690', '互联网', '8000亿', '-', '持续调整', '高'),
-            ('招商银行', '600036', '银行', '1.5万亿', '8.5', '小幅波动', '低'),
-            ('中国平安', '601318', '保险', '9000亿', '6.8', '横盘整理', '低')
-        ]
-        cursor.executemany('''
-        INSERT IGNORE INTO Stocks (name, code, industry, market_cap, pe, recent_performance, volatility)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', stock_data)
+        
 
         # 插入初始基金数据
         fund_data = [
@@ -179,7 +165,7 @@ try:
         ''', fund_data)
 
         # 插入示例账单数据
-        print('[INFO] Inserting sample bills...')
+        print('插入示例账单数据...')
         sample_bills = [
             ('UTSZ', '星巴克咖啡', '餐饮', -45.00, '2023-10-28', '09:25:00'),
             ('UTSZ', '沃尔玛超市', '购物', -189.50, '2023-10-27', '18:42:00'),
@@ -197,10 +183,10 @@ try:
         (user_id, merchant, category, amount, transaction_date, transaction_time)
         VALUES (%s, %s, %s, %s, %s, %s)
         ''', sample_bills)
-        print('[OK] Sample bills inserted')
+        print('✓ 示例账单数据插入完成')
         
         # 插入示例转账历史数据
-        print('[INFO] Inserting sample transfers...')
+        print('插入示例转账历史数据...')
         sample_transfers = [
             ('UTSZ', '6222123456781234', '张三', 1000.00, '2023-10-15', '14:20:00'),
             ('UTSZ', '6222123456785678', '李四', 500.00, '2023-10-10', '10:35:00'),
@@ -213,10 +199,94 @@ try:
         (user_id, recipient_account, recipient_name, amount, transfer_date, transfer_time)
         VALUES (%s, %s, %s, %s, %s, %s)
         ''', sample_transfers)
-        print('[OK] Sample transfers inserted')
+        print('✓ 示例转账历史数据插入完成')
+        
+        # 插入示例资讯数据
+        print('插入示例资讯数据...')
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        sample_news = [
+            ('央行降准0.5个百分点，释放长期资金约1万亿元', 
+             '中国人民银行宣布下调金融机构存款准备金率0.5个百分点，预计释放长期资金约1万亿元，支持实体经济发展。',
+             '中国人民银行今日宣布，将于近期下调金融机构存款准备金率0.5个百分点。此次降准将释放长期资金约1万亿元，有助于降低社会融资成本，支持实体经济发展。专家分析认为，此举体现了稳健货币政策的精准发力，为经济恢复提供有力支持。',
+             '财经新闻', '中国人民银行', '金融时报', (now - timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=1', '央行,降准,货币政策', 1523),
+            
+            ('A股三大指数集体收涨，科技股表现强势', 
+             '今日A股市场延续强势，沪指涨1.2%，创业板指涨2.3%，科技板块领涨。',
+             '今日A股市场延续强势，沪指收涨1.2%，深成指涨1.8%，创业板指涨2.3%。科技板块表现强势，半导体、人工智能、云计算等概念股纷纷走强。分析师指出，政策利好叠加业绩预期改善，科技股有望继续领涨市场。',
+             '市场行情', '东方财富网', '市场研究员', (now - timedelta(hours=4)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=2', 'A股,科技股,市场行情', 2856),
+            
+            ('新版金融监管政策出台，助力实体经济发展', 
+             '金融监管部门发布新版监管政策，强化金融服务实体经济导向，优化融资结构。',
+             '金融监管部门近日发布新版监管政策，强调金融机构要坚持服务实体经济本源，优化融资结构，提升金融服务质效。政策要求加大对制造业、小微企业、科技创新等领域的支持力度，同时防范化解金融风险。',
+             '政策解读', '金融监管总局', '政策分析师', (now - timedelta(hours=6)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=3', '金融监管,政策,实体经济', 1845),
+            
+            ('基金投资入门：如何选择适合自己的基金产品', 
+             '本文详细介绍了基金投资的基础知识，包括基金类型、风险评估、投资策略等内容。',
+             '基金投资是理财的重要方式之一。首先要了解不同类型基金的特点：货币基金风险低流动性好，债券基金收益稳定，股票基金潜在收益高但波动大，混合基金平衡风险与收益。投资者应根据自身风险承受能力、投资期限和收益预期选择合适的产品。建议采用定投方式分散风险，长期持有获取复利效应。',
+             '理财知识', '金融学堂', '理财专家', (now - timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=4', '基金,理财,投资入门', 3421),
+            
+            ('人民币汇率稳中有升，外汇市场运行平稳', 
+             '近期人民币对美元汇率保持稳定并略有上升，反映了我国经济基本面向好。',
+             '近期人民币对美元汇率保持稳定并略有上升，反映了我国经济基本面向好和国际收支平衡的良好态势。专家认为，随着我国经济持续恢复，人民币汇率将在合理均衡水平上保持基本稳定。外汇局表示，将继续深化外汇领域改革开放，维护外汇市场平稳运行。',
+             '市场行情', '外汇管理局', '汇率分析师', (now - timedelta(hours=10)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=5', '人民币,汇率,外汇', 1234),
+            
+            ('银行理财产品收益率回升，投资者信心增强', 
+             '近期银行理财产品平均收益率有所回升，吸引更多投资者关注。',
+             '数据显示，近期银行理财产品平均收益率有所回升，部分产品年化收益率达到4%以上。业内人士分析，这与债券市场收益率波动、银行优化资产配置等因素有关。建议投资者根据自身需求选择合适期限和风险等级的产品，注意产品说明书中的风险提示。',
+             '理财知识', '银行资讯', '理财顾问', (now - timedelta(hours=12)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=6', '银行理财,收益率,投资', 2167),
+            
+            ('数字人民币试点范围扩大，应用场景日益丰富', 
+             '数字人民币试点范围进一步扩大，在零售、交通、政务等领域应用不断深化。',
+             '数字人民币试点范围进一步扩大，已覆盖多个省市。应用场景不断丰富，在零售消费、公共交通、政务服务、税收缴纳等领域的应用持续深化。数字人民币具有法定货币地位、支付便捷、安全可靠等特点，为公众提供了更多支付选择。',
+             '财经新闻', '数字货币研究所', '科技记者', (now - timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=7', '数字人民币,支付,科技金融', 3892),
+            
+            ('保险行业加大创新力度，推出多款惠民保险产品', 
+             '保险公司推出多款创新型惠民保险产品，覆盖医疗、养老、意外等多个领域。',
+             '保险行业持续加大创新力度，推出多款惠民保险产品。这些产品覆盖医疗、养老、意外伤害等多个领域，保费亲民，保障全面。例如城市定制型商业医疗保险，保费低至几十元，保额可达数百万。专家建议，消费者应根据自身需求合理配置保险，构建完善的保障体系。',
+             '理财知识', '保险协会', '保险专家', (now - timedelta(days=1, hours=2)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=8', '保险,惠民,医疗保障', 1678),
+            
+            ('资本市场改革持续深化，注册制改革稳步推进', 
+             '资本市场改革持续深化，全面注册制改革平稳落地，市场生态不断优化。',
+             '资本市场改革持续深化，全面注册制改革平稳落地。这标志着资本市场进入新的发展阶段，有助于提升市场包容性和适应性，更好服务实体经济。监管部门表示，将继续完善基础制度，加强市场监管，保护投资者合法权益，促进资本市场高质量发展。',
+             '政策解读', '证监会', '市场观察员', (now - timedelta(days=1, hours=6)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=9', '资本市场,注册制,改革', 2543),
+            
+            ('金融科技赋能普惠金融，小微企业融资更便利', 
+             '金融科技创新应用不断深化，为小微企业提供更加便捷高效的融资服务。',
+             '金融科技创新应用不断深化，通过大数据、人工智能等技术，金融机构能够更精准地评估企业信用，为小微企业提供便捷高效的融资服务。数据显示，普惠小微贷款余额持续增长，平均利率稳中有降，有效缓解了小微企业融资难、融资贵问题。',
+             '财经新闻', '金融科技协会', '科技观察员', (now - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=10', '金融科技,普惠金融,小微企业', 1956),
+            
+            ('养老金融产品创新发展，助力构建多层次养老保障体系', 
+             '养老金融产品创新发展，个人养老金制度稳步实施，为养老保障提供有力支持。',
+             '养老金融产品创新发展，个人养老金制度稳步实施。银行、保险、基金等机构纷纷推出各类养老金融产品，为居民提供多样化的养老储备选择。专家建议，应尽早规划养老财务，通过多种方式积累养老资金，构建完善的养老保障体系。',
+             '理财知识', '养老金融研究院', '养老规划师', (now - timedelta(days=2, hours=4)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=11', '养老,个人养老金,保障', 2234),
+            
+            ('绿色金融快速发展，支持经济社会绿色转型', 
+             '绿色金融快速发展，绿色信贷、绿色债券规模持续增长，助力实现"双碳"目标。',
+             '绿色金融快速发展，绿色信贷、绿色债券规模持续增长。金融机构积极支持清洁能源、节能环保等绿色产业发展，助力实现碳达峰、碳中和目标。监管部门不断完善绿色金融标准体系，引导更多资金投向绿色低碳领域，促进经济社会绿色转型。',
+             '政策解读', '绿色金融委员会', '环境金融专家', (now - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S'), 
+             'https://picsum.photos/400/240?random=12', '绿色金融,碳中和,可持续发展', 1823)
+        ]
+        cursor.executemany('''
+        INSERT IGNORE INTO News
+        (title, summary, content, category, source, author, publish_time, image_url, tags, read_count)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', sample_news)
+        print('✓ 示例资讯数据插入完成')
         
         # 插入初始AI建议数据
-        print('[INFO] Inserting AI suggestions...')
+        print('插入AI建议数据...')
         ai_suggestions = [
             # 转账页面智能账户推荐
             ('transfer', 'recent_accounts', '''{
@@ -261,38 +331,39 @@ try:
         INSERT IGNORE INTO AISuggestions (page_type, suggestion_type, content)
         VALUES (%s, %s, %s)
         ''', ai_suggestions)
-        print('[OK] AI suggestions inserted')
+        print('✓ AI建议数据插入完成')
 
     conn.commit()
     print('''
-============================================================
-DATABASE INITIALIZATION COMPLETE!
-============================================================
-
-Created tables:
-  - Users (user table)
-  - Stocks (stock table)
-  - Fundings (fund table)
-  - Bills (bill table)
-  - TransferHistory (transfer history table)
-  - AISuggestions (AI suggestions table)
-  - UserAIActions (user AI actions table)
-
-Inserted data:
-  - 1 test user (UTSZ/admin)
-  - 8 stock records
-  - 5 fund records
-  - 10 bill records
-  - 5 transfer history records
-  - AI suggestion data
-
-[SUCCESS] Ready to start the application!
-============================================================
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║   ✅ 数据库初始化完成！                                   ║
+║                                                           ║
+║   创建的表：                                             ║
+║   • Users - 用户表                                        ║
+║   • Fundings - 基金表                                     ║
+║   • Bills - 账单表                                        ║
+║   • TransferHistory - 转账历史表                         ║
+║   • News - 资讯表                                         ║
+║   • AISuggestions - AI建议表                             ║
+║   • UserAIActions - 用户AI交互表                         ║
+║                                                           ║
+║   插入的数据：                                           ║
+║   • 1个测试用户 (UTSZ/admin)                             ║
+║   • 5条基金数据                                          ║
+║   • 10条账单数据                                         ║
+║   • 5条转账历史数据                                      ║
+║   • 12条资讯数据                                         ║
+║   • AI建议配置数据                                       ║
+║                                                           ║
+║   🚀 现在可以启动应用了！                               ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
     ''')
 
 except Exception as e:
-    print(f'[ERROR] Database initialization failed: {e}')
+    print(f'❌ 创建数据库和表失败: {e}')
     conn.rollback()
 finally:
     conn.close()
-    print('[INFO] Database connection closed')
+    print('🔌 数据库连接已关闭')

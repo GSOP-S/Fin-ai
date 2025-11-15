@@ -1,17 +1,16 @@
 """
-Vercel Serverless Function 入口文件
-将 Flask 应用改造为适配 Vercel 的 WSGI 应用
+Vercel Serverless Functions 入口文件
+负责应用初始化、蓝图注册和WSGI应用导出
 """
-
-import sys
-import os
-
-# 添加项目根目录到 Python 路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+import os
+import sys
+
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # 加载环境变量
 load_dotenv()
@@ -20,12 +19,12 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 
-# 配置CORS - 支持所有来源（生产环境）
+# 配置CORS - 生产环境允许所有来源
 CORS(app, resources={
     r"/api/*": {
-        "origins": "*",  # Vercel 部署后允许所有来源
+        "origins": "*",  # 生产环境允许所有来源
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "expose_headers": ["Content-Type", "Authorization"],
         "supports_credentials": False
     }
@@ -37,25 +36,34 @@ try:
     from controllers.transfer_controller import transfer_bp
     from controllers.home_controller import home_bp
     from controllers.user_controller import user_bp
-    from controllers.ai_controller import ai_bp
     from controllers.ai_interaction import ai_interaction_bp
-    from controllers.stock_controller import stock_bp
     from controllers.fund_controller import fund_bp
-
+    from controllers.news_controller import news_bp
+    from controllers.behavior_controller import behavior_bp
+    
     app.register_blueprint(bill_bp)
     app.register_blueprint(transfer_bp)
     app.register_blueprint(home_bp)
     app.register_blueprint(user_bp)
-    app.register_blueprint(ai_bp)
     app.register_blueprint(ai_interaction_bp)
-    app.register_blueprint(stock_bp)
     app.register_blueprint(fund_bp)
+    app.register_blueprint(news_bp)
+    app.register_blueprint(behavior_bp)
+    
+    print("[Vercel] 蓝图注册成功")
 except ImportError as e:
-    print(f"警告: 蓝图导入失败 - {str(e)}")
+    print(f"[Vercel] 警告: 蓝图导入失败 - {str(e)}")
+
+# 注册AI路由（使用新的注册方式）
+try:
+    from controllers.ai_controller import register_ai_routes
+    register_ai_routes(app)
+    print("[Vercel] AI路由注册成功")
+except ImportError as e:
+    print(f"[Vercel] 警告: AI路由导入失败 - {str(e)}")
 
 # 健康检查接口
 @app.route('/api/health', methods=['GET'])
-@app.route('/health', methods=['GET'])
 def health_check():
     """健康检查接口"""
     return jsonify({
@@ -65,15 +73,13 @@ def health_check():
         'platform': 'Vercel Serverless'
     })
 
-# 根路径接口
-@app.route('/', methods=['GET'])
-@app.route('/api', methods=['GET'])
+# 根路径
+@app.route('/')
 def index():
-    """API 根路径"""
+    """根路径重定向"""
     return jsonify({
         'message': 'Fin-AI API Server',
         'version': '2.1.0',
-        'status': 'running',
         'docs': '/api/health'
     })
 
@@ -91,14 +97,8 @@ def internal_error(error):
     return jsonify({
         'success': False,
         'error': 'Internal server error',
-        'message': str(error)
+        'message': 'The server encountered an internal error.'
     }), 500
 
-# Vercel 会自动使用 Flask app
-# 不需要额外的 handler，Vercel 会自动检测 'app' 变量
-
-# 本地测试支持
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
-
+# Vercel 会自动检测 'app' 变量作为 WSGI 应用
+# 不需要 if __name__ == '__main__' 块

@@ -65,6 +65,18 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
 
 # Vercel
 .vercel
+.vercel.json

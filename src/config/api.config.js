@@ -4,8 +4,9 @@
  */
 
 // 根据环境变量决定BaseURL
+// 开发环境使用空字符串让Vite代理处理，生产环境使用环境变量
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 10000,
   retryTimes: 3,
 };
@@ -18,6 +19,7 @@ export const API_ENDPOINTS = {
     suggestion: '/api/ai/suggestion',
     feedback: '/api/ai/feedback',
     settings: '/api/ai/settings',
+    analyzeLogs: '/api/ai/analyze-logs',
   },
   
   // 账单相关接口
@@ -34,18 +36,22 @@ export const API_ENDPOINTS = {
     suggestion: '/api/transfer-suggestion',
   },
   
-  // 股票相关接口
-  stock: {
-    list: '/api/stocks',
-    detail: '/api/stock/:code',
-    suggestion: '/api/stock-suggestion',
-  },
+  
   
   // 基金相关接口
   fund: {
     list: '/api/funds',
     detail: '/api/fund/:code',
     suggestion: '/api/fund-suggestion',
+  },
+  
+  // 资讯相关接口
+  news: {
+    list: '/api/news',
+    detail: '/api/news/:id',
+    search: '/api/news/search',
+    hot: '/api/news/hot',
+    read: '/api/news/:id/read',
   },
   
   // 用户相关接口

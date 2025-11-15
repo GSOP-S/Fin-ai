@@ -1,12 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './FundList.css';
-import { fetchFundList } from '../api/fund';
+import { fetchFundList, getCachedFundSuggestion } from '../api/fund';
+import { usePageTracking } from '../hooks/usePageTracking';
+import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
+import { EventTypes } from '../config/tracking.config';
 
-const FundList = () => {
+const FundList = ({ onSelectFund, highlightedFundIds = [] }) => {
+  // ===== 行为追踪 =====
+  const tracker = useBehaviorTracker();
+  usePageTracking('financing', { section: 'fund_list' });
+  
   const [selectedFund, setSelectedFund] = useState(null);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fundSuggestions, setFundSuggestions] = useState({}); // 存储基金建议缓存
+  
+  // 基金卡片引用（用于滚动）
+  const fundRefs = useRef({});
   
   // 分页和筛选状态
   const [pagination, setPagination] = useState({
@@ -25,6 +36,27 @@ const FundList = () => {
   });
 
 
+  // 预加载基金建议
+  const preloadFundSuggestions = async (fundsList) => {
+    if (!fundsList || fundsList.length === 0) return;
+    
+    // 只预加载前5个基金的建议，避免过多请求
+    const fundsToPreload = fundsList.slice(0, 5);
+    
+    // 并行请求，但不等待所有完成
+    fundsToPreload.forEach(async (fund) => {
+      try {
+        const result = await getCachedFundSuggestion(fund);
+        if (result.success && result.data && result.data.suggestion) {
+          // 更新状态，但不阻塞UI
+          setFundSuggestions(prev => ({ ...prev, [fund.code]: result.data.suggestion }));
+        }
+      } catch (error) {
+        console.error(`预加载基金${fund.code}建议失败:`, error);
+      }
+    });
+  };
+  
   // 从后端获取基金数据 - 支持分页、筛选和排序
   const fetchFunds = async (page = 1, filterOptions = filters) => {
     setLoading(true);
@@ -48,6 +80,11 @@ const FundList = () => {
         // 确保 funds 是数组 - 后端返回的是 data.data
         setFunds(Array.isArray(result.data.data) ? result.data.data : []);
         console.log("获取到基金数据:", result.data);
+        
+        // 预加载基金建议
+        if (Array.isArray(result.data.data) && result.data.data.length > 0) {
+          preloadFundSuggestions(result.data.data);
+        }
       } else {
         setFunds([]);
         throw new Error(result.message || '获取基金数据失败');
@@ -64,19 +101,93 @@ const FundList = () => {
     fetchFunds();
   }, []);
   
+  // 监听滚动到基金的事件
+  useEffect(() => {
+    const handleScrollToFund = (event) => {
+      const { fundCodes } = event.detail;
+      if (!fundCodes || fundCodes.length === 0) return;
+      
+      // 滚动到第一个高亮基金
+      const firstCode = fundCodes[0];
+      const fundElement = fundRefs.current[firstCode];
+      
+      if (fundElement) {
+        console.log('[FundList] 滚动到基金:', firstCode);
+        fundElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      } else {
+        console.warn('[FundList] 未找到基金元素:', firstCode);
+      }
+    };
+    
+    window.addEventListener('scroll-to-fund', handleScrollToFund);
+    
+    return () => {
+      window.removeEventListener('scroll-to-fund', handleScrollToFund);
+    };
+  }, [funds]);
+  
   // 处理筛选和排序变化
   const handleFilterChange = (newFilters) => {
+    // 追踪筛选操作
+    tracker.track(EventTypes.FUND_FILTER, {
+      filter_type: 'category_or_risk_or_sort',
+      category: newFilters.category,
+      risk_level: newFilters.riskLevel,
+      order_by: newFilters.orderBy,
+      order_dir: newFilters.orderDir,
+    });
+    
     setFilters(newFilters);
     fetchFunds(1, newFilters);
   };
   
   // 处理页码变化
   const handlePageChange = (page) => {
+    // 追踪分页操作
+    tracker.track(EventTypes.CLICK, {
+      element_id: 'fund-pagination',
+      action: 'page_change',
+      from_page: pagination.currentPage,
+      to_page: page,
+    });
+    
     fetchFunds(page);
   };
 
   const handleFundClick = (fund) => {
+    // 追踪查看基金详情（重点追踪 - 实时上报）
+    tracker.track(EventTypes.FUND_VIEW, {
+      fund_code: fund.code,
+      fund_name: fund.name,
+      fund_category: fund.category,
+      fund_nav: fund.nav,
+      fund_change: fund.change,
+      fund_change_percent: fund.changePercent,
+      fund_risk: fund.risk,
+      has_preloaded_suggestion: !!fundSuggestions[fund.code],
+    }, { realtime: true }); // 实时上报
+    
     setSelectedFund(fund);
+    
+    // 如果有预加载的建议，立即显示
+    if (fundSuggestions[fund.code]) {
+      console.log(`使用预加载的基金建议: ${fund.code}`);
+    } else {
+      // 如果没有预加载的建议，立即开始获取
+      getCachedFundSuggestion(fund).then(result => {
+        if (result.success && result.data && result.data.suggestion) {
+          setFundSuggestions(prev => ({ ...prev, [fund.code]: result.data.suggestion }));
+        }
+      });
+    }
+    
+    // 如果传入了onSelectFund回调，则调用它
+    if (onSelectFund) {
+      onSelectFund(fund);
+    }
   };
 
   const renderContent = () => {
@@ -173,12 +284,16 @@ const FundList = () => {
         </div>
         
         <div className="fund-list">
-          {funds.map((fund) => (
-            <div 
-            key={fund.id || fund.code} 
-            className={`fund-item ${selectedFund?.id === fund.id ? 'selected' : ''}`}
-            onClick={() => handleFundClick(fund)}
-          >
+          {funds.map((fund) => {
+            const isHighlighted = highlightedFundIds.includes(fund.code);
+            
+            return (
+              <div 
+                key={fund.id || fund.code} 
+                ref={(el) => { if (el) fundRefs.current[fund.code] = el; }}
+                className={`fund-item ${selectedFund?.id === fund.id ? 'selected' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                onClick={() => handleFundClick(fund)}
+              >
               <div className="fund-info">
                 <div className="fund-name">{fund.name}</div>
                 <div className="fund-code">{fund.code}</div>
@@ -191,7 +306,8 @@ const FundList = () => {
                 <div className="fund-category">{fund.category}</div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         
         {/* 分页控件 - 为未来连接金融数据库预留 */}

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock日志分析服务演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .command-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .command-bubble {
+            background-color: #2196F3;
+            color: white;
+        }
+        .command-highlight {
+            background-color: #FF9800;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mock日志分析服务演示</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('api-test')">API测试</div>
+        <div class="tab" onclick="switchTab('integration-demo')">集成演示</div>
+        <div class="tab" onclick="switchTab('documentation')">文档说明</div>
+    </div>
+    
+    <div id="api-test" class="tab-content active">
+        <div class="container">
+            <h2>API测试</h2>
+            <div class="form-group">
+                <label for="userId">用户ID:</label>
+                <input type="text" id="userId" value="demo_user_001" placeholder="输入用户ID">
+            </div>
+            
+            <div class="form-group">
+                <label for="pageType">页面类型:</label>
+                <select id="pageType">
+                    <option value="home">首页</option>
+                    <option value="fund">基金页面</option>
+                    <option value="bill">账单页面</option>
+                    <option value="transfer">转账页面</option>
+                    <option value="market">市场页面</option>
+                </select>
+            </div>
+            
+            <button id="testBtn" onclick="testMockService()">测试Mock服务</button>
+            <button id="clearBtn" onclick="clearResult()">清除结果</button>
+            
+            <div id="result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div id="integration-demo" class="tab-content">
+        <div class="container">
+            <h2>集成演示</h2>
+            <p>这个演示展示了如何在前端应用中集成Mock日志分析服务。</p>
+            
+            <div class="form-group">
+                <label for="demoUserId">用户ID:</label>
+                <input type="text" id="demoUserId" value="demo_user_002" placeholder="输入用户ID">
+            </div>
+            
+            <button id="demoBtn" onclick="demoIntegration()">运行演示</button>
+            
+            <div id="demoResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div id="documentation" class="tab-content">
+        <div class="container">
+            <h2>文档说明</h2>
+            <h3>Mock日志分析服务</h3>
+            <p>Mock日志分析服务模拟了大模型分析用户行为日志并返回建议的过程。它从数据库中读取用户最近的行为日志，然后根据预设的模板返回包含建议和命令的响应。</p>
+            
+            <h3>API接口</h3>
+            <p><strong>端点:</strong> <code>/api/ai/analyze-logs</code></p>
+            <p><strong>方法:</strong> POST</p>
+            <p><strong>请求体:</strong></p>
+            <pre>{
+  "userId": "用户ID",
+  "pageType": "页面类型(可选)"
+}</pre>
+            
+            <p><strong>响应:</strong></p>
+            <pre>{
+  "success": true,
+  "data": {
+    "suggestion": "建议内容",
+    "command": "bubble|highlight",
+    "confidence": 0.85,
+    "mock_mode": true,
+    "timestamp": 1234567890,
+    "user_id": "用户ID"
+  }
+}</pre>
+            
+            <h3>命令类型</h3>
+            <p><strong>bubble:</strong> 显示建议弹窗</p>
+            <p><strong>highlight:</strong> 高亮特定基金(需要fund_id字段)</p>
+            
+            <h3>集成方式</h3>
+            <p>前端可以通过调用<code>analyzeUserLogs</code>函数来使用此服务：</p>
+            <pre>import { analyzeUserLogs } from '../api/ai';
+
+// 在组件中使用
+const result = await analyzeUserLogs(userId, pageType);
+if (result.command === 'bubble') {
+  // 显示建议弹窗
+} else if (result.command === 'highlight') {
+  // 高亮特定基金
+}</pre>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            // 隐藏所有标签内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 移除所有标签的活动状态
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 显示选中的标签内容
+            document.getElementById(tabId).classList.add('active');
+            
+            // 设置选中的标签为活动状态
+            event.target.classList.add('active');
+        }
+        
+        async function testMockService() {
+            const userId = document.getElementById('userId').value;
+            const pageType = document.getElementById('pageType').value;
+            const resultDiv = document.getElementById('result');
+            const testBtn = document.getElementById('testBtn');
+            
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+            
+            // 显示加载状态
+            testBtn.disabled = true;
+            testBtn.innerHTML = '<span class="loading"></span>测试中...';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div>正在请求Mock服务...';
+            
+            try {
+                const response = await fetch('/api/ai/analyze-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        pageType: pageType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const command = data.data.command;
+                    const commandClass = command === 'bubble' ? 'command-bubble' : 'command-highlight';
+                    
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `
+                        <h3>请求成功 <span class="command-badge ${commandClass}">${command}</span></h3>
+                        <p><strong>建议:</strong> ${data.data.suggestion}</p>
+                        <p><strong>置信度:</strong> ${data.data.confidence}</p>
+                        <p><strong>时间戳:</strong> ${new Date(data.data.timestamp * 1000).toLocaleString()}</p>
+                        <p><strong>Mock模式:</strong> ${data.data.mock_mode ? '是' : '否'}</p>
+                        ${data.data.fund_id ? `<p><strong>基金ID:</strong> ${data.data.fund_id}</p>` : ''}
+                        <details>
+                            <summary>完整响应</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>请求失败</h3>
+                        <p><strong>错误:</strong> ${data.error || '未知错误'}</p>
+                        <details>
+                            <summary>完整响应</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>请求异常</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `;
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = '测试Mock服务';
+            }
+        }
+        
+        function clearResult() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+            resultDiv.innerHTML = '';
+        }
+        
+        async function demoIntegration() {
+            const userId = document.getElementById('demoUserId').value;
+            const demoResult = document.getElementById('demoResult');
+            const demoBtn = document.getElementById('demoBtn');
+            
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+            
+            // 显示加载状态
+            demoBtn.disabled = true;
+            demoBtn.innerHTML = '<span class="loading"></span>演示中...';
+            demoResult.style.display = 'block';
+            demoResult.innerHTML = '<div class="loading"></div>正在运行演示...';
+            
+            try {
+                // 模拟前端集成流程
+                const steps = [
+                    '1. 获取用户ID和页面类型...',
+                    '2. 调用analyzeUserLogs函数...',
+                    '3. 处理返回的command字段...',
+                    '4. 根据command执行相应操作...'
+                ];
+                
+                let stepHtml = '';
+                for (const step of steps) {
+                    stepHtml += `<p>${step}</p>`;
+                    demoResult.innerHTML = stepHtml;
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                // 调用实际API
+                const response = await fetch('/api/ai/analyze-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        pageType: 'home'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const command = data.data.command;
+                    let actionHtml = '';
+                    
+                    if (command === 'bubble') {
+                        actionHtml = `
+                            <div class="result">
+                                <h3>执行操作: 显示建议弹窗</h3>
+                                <p>根据返回的command字段，前端会显示一个包含以下建议的弹窗:</p>
+                                <blockquote>${data.data.suggestion}</blockquote>
+                            </div>
+                        `;
+                    } else if (command === 'highlight') {
+                        actionHtml = `
+                            <div class="result">
+                                <h3>执行操作: 高亮特定基金</h3>
+                                <p>根据返回的command字段，前端会高亮显示ID为 ${data.data.fund_id || '未知'} 的基金</p>
+                                <p>建议内容: ${data.data.suggestion}</p>
+                            </div>
+                        `;
+                    }
+                    
+                    demoResult.innerHTML = stepHtml + actionHtml;
+                } else {
+                    demoResult.className = 'result error';
+                    demoResult.innerHTML = stepHtml + `
+                        <div class="result error">
+                            <h3>API调用失败</h3>
+                            <p><strong>错误:</strong> ${data.error || '未知错误'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                demoResult.className = 'result error';
+                demoResult.innerHTML = `
+                    <h3>演示异常</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `;
+            } finally {
+                demoBtn.disabled = false;
+                demoBtn.innerHTML = '运行演示';
+            }
+        }
+    </script>
+</body>
+</html>

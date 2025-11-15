@@ -27,6 +27,7 @@ class ModelProvider:
     def __init__(self, provider: str | None = None):
         # 自动推断 provider
         self.provider = provider or ("openai" if os.getenv("OPENAI_API_KEY") else "mock")
+        print(f"[ModelProvider] 使用 {self.provider} 模式")
 
         # 如果选用 openai 且库可用，则初始化 api_key
         if self.provider == "openai":
@@ -39,6 +40,8 @@ class ModelProvider:
                 if not openai.api_key:
                     print("[ModelProvider] 未检测到 OPENAI_API_KEY，回退至 mock 模式")
                     self.provider = "mock"
+                else:
+                    print(f"[ModelProvider] 使用 OpenAI 模式，API Key已配置")
 
     # ------------------------------------------------------------------
     # 对外统一接口
@@ -47,9 +50,9 @@ class ModelProvider:
         """根据 ``prompt`` 与 ``context`` 生成文本
 
         1. 当 ``provider`` = ``openai`` 且配置正确时调用 OpenAI ChatCompletion
-        2. 其余情况返回 mock 文本，避免后端报错
+        2. 其余情况抛出异常，让上层service处理fallback
         """
-        if self.provider == "openai" and openai is not None:
+        if self.provider == "openai" and openai is not None and openai.api_key:
             try:
                 messages = [
                     {"role": "system", "content": "你是专业的金融理财顾问。"},
@@ -62,12 +65,29 @@ class ModelProvider:
                     model="gpt-3.5-turbo",
                     messages=messages,
                     temperature=0.7,
+                    timeout=5,  # 减少超时时间到5秒
                 )
                 return response.choices[0].message.content.strip()
             except Exception as exc:  # pragma: no cover
-                # 打印错误并回退到 mock 结果，避免接口整体失败
+                # 打印错误并抛出异常，让上层service处理fallback
                 print(f"[ModelProvider] OpenAI 调用失败: {exc}")
+                raise Exception("OpenAI API调用失败")
 
-        # 默认 mock 返回
-        ellipsis_prompt = prompt[:20] + ("..." if len(prompt) > 20 else "")
-        return f"[MOCK_MODEL_REPLY] prompt={ellipsis_prompt} context={context}"
+        # 默认抛出异常，让上层service处理fallback
+        raise Exception("模型未配置或API调用失败")
+    
+    # 暂时注释掉mock响应方法，改由各服务层处理fallback逻辑
+    # def _get_mock_response(self, prompt: str, context: Dict[str, Any] | None = None) -> str:
+    #     """生成mock响应"""
+    #     # 根据不同的prompt类型返回不同的mock响应
+    #     if "市场" in prompt or "market" in prompt.lower():
+    #         return "当前市场整体表现平稳，建议投资者保持理性，关注优质蓝筹股和债券配置，控制风险。"
+    #     elif "基金" in prompt or "fund" in prompt.lower():
+    #         return "基金投资需谨慎，建议根据自身风险承受能力选择合适的基金产品，分散投资降低风险。"
+    #     elif "账单" in prompt or "bill" in prompt.lower():
+    #         return "建议您定期查看账单明细，合理控制支出，提高储蓄率，建立良好的消费习惯。"
+    #     elif "转账" in prompt or "transfer" in prompt.lower():
+    #         return "转账时请仔细核对收款人信息，大额转账建议分批进行，确保资金安全。"
+    #     else:
+    #         ellipsis_prompt = prompt[:20] + ("..." if len(prompt) > 20 else "")
+    #         return f"[MOCK_MODEL_REPLY] prompt={ellipsis_prompt} context={context}"

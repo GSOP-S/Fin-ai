@@ -63,7 +63,6 @@ handleNavigate(page) → 延迟1秒 → triggerPageAISuggestion(page)
   'market': '/api/market-analysis',    // 原有
   'bill': '/api/bill-analysis',        // 新增
   'transfer': '/api/transfer-suggestion', // 原有
-  'stock': '/api/stock-suggestion',    // 原有
   'fund': '/api/fund-suggestion'       // 原有
 }
 ```
@@ -117,7 +116,6 @@ Fin-ai/
 │   ├── bill_analysis_service.py      # 账单分析服务
 │   ├── transfer_suggestion_service.py # 转账建议服务
 │   ├── home_suggestion_service.py     # 首页建议服务
-│   ├── stock_service.py              # 股票服务（原有）
 │   └── fund_service.py               # 基金服务（原有）
 │
 ├── mapper/                    # 数据访问层 ✨ 新增

@@ -150,75 +150,7 @@
   margin-top: 0.5rem;
 }
 
-/* 股票详情页面样式 */
-.stock-detail {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
 
-.back-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #1890ff;
-  margin-bottom: 16px;
-  cursor: pointer;
-}
-
-.stock-detail h2 {
-  font-size: 24px;
-  margin-bottom: 12px;
-}
-
-.stock-price {
-  font-size: 36px;
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.stock-change {
-  font-size: 16px;
-  margin-bottom: 24px;
-}
-
-.stock-industry {
-  font-size: 16px;
-  color: #666;
-  margin: 10px 0;
-  padding: 8px 12px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.trade-buttons {
-  display: flex;
-  gap: 16px;
-}
-
-.buy-btn, .sell-btn {
-  flex: 1;
-  padding: 12px;
-  font-size: 18px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.buy-btn {
-  background-color: #52c41a;
-  color: white;
-}
-
-.sell-btn {
-  background-color: #ff4d4f;
-  color: white;
-}
 
 /* 基金详情页面样式 */
 .fund-detail {

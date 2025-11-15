@@ -67,6 +67,48 @@ class HomeSuggestionService:
             }
         }
     
+    def generate_home_suggestion_from_context(self, context: Dict) -> Dict:
+        """
+        从上下文生成首页建议（与ai_service.py兼容）
+        
+        Args:
+            context: 包含用户信息的上下文
+        Returns:
+            首页建议
+        """
+        user_id = context.get('userId', '')
+        
+        # 生成个性化建议
+        suggestions = []
+        
+        # 问候语
+        hour = datetime.now().hour
+        if 5 <= hour < 12:
+            greeting = '早上好'
+        elif 12 <= hour < 18:
+            greeting = '下午好'
+        else:
+            greeting = '晚上好'
+        
+        suggestions.append(f'{greeting}！今日为您推荐以下操作：')
+        
+        # 理财建议
+        suggestions.append('\n💡 根据您的消费习惯，建议适当增加储蓄比例')
+        suggestions.append('\n🎯 当前有多款理财产品利率优惠，建议查看详情')
+        
+        # 安全提醒
+        suggestions.append('\n🔒 定期修改密码，保障账户安全')
+        
+        suggestion_text = ''.join(suggestions)
+        
+        return {
+            'suggestion': suggestion_text,
+            'userInfo': {
+                'userId': user_id,
+                'greeting': greeting
+            }
+        }
+    
     def _generate_personalized_suggestions(self, bill_stats: Dict, 
                                           transfer_stats: Dict,
                                           display_name: str) -> str:
@@ -144,8 +186,8 @@ class HomeSuggestionService:
             from services.model_provider import ModelProvider
             model = ModelProvider()
             prompt = (
-                "请作为个人财务助理，根据以下信息用不超过80字生成个性化首页问候与理财提示（中文）：\n"\
-                f"本月总支出: {bill_stats.get('total_expense', 0)} 元，交易笔数: {bill_stats.get('total_count', 0)}；"\
+                "请作为个人财务助理，根据以下信息用不超过80字生成个性化首页问候与理财提示（中文）：\n" +
+                f"本月总支出: {bill_stats.get('total_expense', 0)} 元，交易笔数: {bill_stats.get('total_count', 0)}；" +
                 f"本月转账总额: {transfer_stats.get('total_amount', 0)} 元，转账次数: {transfer_stats.get('total_count', 0)}。"
             )
             return model.generate(prompt, context={"type": "home"})

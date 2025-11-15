@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { getPageSuggestion } from '../api/ai';
+import { generateAISuggestion, analyzeUserLogs } from '../api/ai';
 import { formatAISuggestion } from '../utils/aiFormatter';
 import { getAIConfig, AI_SPEECH_CONFIG } from '../config/ai.config';
 
@@ -24,89 +24,6 @@ export function useAI(options = {}) {
   // 定时器引用
   const hideTimerRef = useRef(null);
   const speechRef = useRef(null);
-  
-  /**
-   * 显示AI建议
-   * @param {string} pageType - 页面类型 (bill/transfer/stock...)
-   * @param {object} context - 上下文数据
-   * @param {object} configOverrides - 配置覆盖
-   */
-  const show = useCallback(async (pageType, context = {}, configOverrides = {}) => {
-    // 清除之前的定时器
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-    }
-    
-    // 停止之前的语音
-    if (speechRef.current) {
-      window.speechSynthesis.cancel();
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // 获取配置
-      const config = getAIConfig(pageType, { ...options, ...configOverrides });
-      
-      // 调用API
-      const result = await getPageSuggestion(pageType, context);
-      
-      if (!result || !result.success) {
-        throw new Error(result?.error || 'AI建议获取失败');
-      }
-      
-      // 格式化建议文本
-      const text = formatAISuggestion(result.data, pageType);
-      
-      // 更新状态
-      setSuggestion(result.data);
-      setSuggestionText(text);
-      
-      // 自动显示
-      if (config.autoShow) {
-        setIsVisible(true);
-        
-        // 自动隐藏
-        if (config.autoHideDelay > 0) {
-          hideTimerRef.current = setTimeout(() => {
-            setIsVisible(false);
-          }, config.autoHideDelay);
-        }
-      }
-      
-      // 语音播报
-      if (config.speakEnabled && text) {
-        speak(text);
-      }
-      
-      return result.data;
-    } catch (err) {
-      console.error('AI建议获取失败:', err);
-      setError(err.message);
-      
-      // 显示错误提示
-      setSuggestionText('抱歉，AI助手暂时不可用，请稍后再试。');
-      setIsVisible(true);
-      
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [options]);
-  
-  /**
-   * 隐藏建议
-   */
-  const hide = useCallback(() => {
-    setIsVisible(false);
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-    }
-    if (speechRef.current) {
-      window.speechSynthesis.cancel();
-    }
-  }, []);
   
   /**
    * 语音播报
@@ -137,6 +54,246 @@ export function useAI(options = {}) {
   }, []);
   
   /**
+   * 显示AI建议
+   * @param {string} pageType - 页面类型 (bill/transfer/fund...) 或包含content的对象
+   * @param {object} context - 上下文数据
+   * @param {object} configOverrides - 配置覆盖
+   */
+  const show = useCallback(async (pageType, context = {}, configOverrides = {}) => {
+    console.log(`[AI] 显示建议: pageType=${pageType}, context=`, context);
+    
+    // 清除之前的定时器
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+    
+    // 停止之前的语音
+    if (speechRef.current) {
+      window.speechSynthesis.cancel();
+    }
+    
+    // 处理来自行为追踪的直接建议对象
+    if (typeof pageType === 'object' && pageType.content) {
+      const { content, source, confidence } = pageType;
+      console.log(`[AI] 显示行为追踪建议: ${content}, source=${source}, confidence=${confidence}`);
+      
+      // 获取默认配置
+      let config;
+      try {
+        config = getAIConfig('behavior', { ...options, ...configOverrides });
+      } catch (configError) {
+        console.error('AI配置获取失败:', configError);
+        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+      }
+      
+      // 更新状态
+      setSuggestion({
+        suggestion: content,
+        command: 'bubble',
+        confidence: confidence || 0,
+        source: source || 'behavior'
+      });
+      setSuggestionText(content);
+      
+      // 自动显示
+      if (config.autoShow) {
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      }
+      
+      // 语音播报
+      if (config.speakEnabled && content) {
+        try {
+          speak(content);
+        } catch (speechError) {
+          console.error('语音播报调用失败:', speechError);
+        }
+      }
+      
+      return {
+        suggestion: content,
+        command: 'bubble',
+        confidence: confidence || 0,
+        source: source || 'behavior'
+      };
+    }
+    
+    // 原有的页面类型处理逻辑
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // 获取配置
+      // 获取配置并处理可能的配置错误
+      let config;
+      try {
+        config = getAIConfig(pageType, { ...options, ...configOverrides });
+        console.log(`[AI] 配置:`, config);
+      } catch (configError) {
+        console.error('AI配置获取失败:', configError);
+        // 使用默认配置继续
+        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+      }
+      
+      // 对于基金页面，如果有预加载的建议，直接使用
+      if (pageType === 'fund' && context.fundData && context.fundData.fundCode) {
+        // 检查是否有预加载的建议
+        try {
+          // 尝试从全局缓存获取建议
+          const { getCachedFundSuggestion } = await import('../api/fund');
+          const fund = {
+            code: context.fundData.fundCode,
+            name: context.fundData.fundName,
+            category: context.fundData.fundType,
+            risk: context.fundData.riskLevel,
+            nav: context.fundData.nav,
+            change: context.fundData.change,
+            changePercent: context.fundData.changePercent
+          };
+          
+          const cachedResult = await getCachedFundSuggestion(fund);
+          if (cachedResult.success && cachedResult.data && cachedResult.data.suggestion) {
+            console.log(`[AI] 使用缓存的基金建议: ${context.fundData.fundCode}`);
+            const text = cachedResult.data.suggestion;
+            setSuggestion(cachedResult.data);
+            setSuggestionText(text);
+            
+            if (config.autoShow) {
+              setIsVisible(true);
+              if (config.autoHideDelay > 0) {
+                hideTimerRef.current = setTimeout(() => {
+                  setIsVisible(false);
+                }, config.autoHideDelay);
+              }
+            }
+            
+            if (config.speakEnabled && text) {
+              try {
+                speak(text);
+              } catch (speechError) {
+                console.error('语音播报调用失败:', speechError);
+              }
+            }
+            
+            setIsLoading(false);
+            return cachedResult.data;
+          }
+        } catch (cacheError) {
+          console.error('获取缓存基金建议失败:', cacheError);
+        }
+      }
+      
+      // 调用API
+      console.log(`[AI] 调用API: pageType=${pageType}`);
+      // 确保用户信息被正确传递
+      const apiContext = {
+        ...context,
+        userId: options.userId || context.userId || null
+      };
+      const result = await generateAISuggestion(pageType, apiContext);
+      console.log(`[AI] API返回结果:`, result);
+      
+      // 即使AI调用失败，generateAISuggestion已返回备用建议
+      
+      // 格式化建议文本
+      // 为格式化步骤添加错误处理，确保备用建议能正常显示
+      let text;
+      try {
+        text = formatAISuggestion(result, pageType);
+        console.log(`[AI] 格式化后的文本:`, text);
+      } catch (formatError) {
+        console.error('AI建议格式化失败:', formatError);
+        // 直接使用备用建议中的文本内容
+        text = result.suggestion || result.analysis || '暂无建议';
+      }
+      
+      // 更新状态
+      setSuggestion(result);
+      setSuggestionText(text);
+      
+      // 自动显示
+      if (config.autoShow) {
+        console.log(`[AI] 自动显示建议: ${text}`);
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      }
+      
+      // 语音播报
+      // 语音播报添加错误处理
+      if (config.speakEnabled && text) {
+        try {
+          speak(text);
+        } catch (speechError) {
+          console.error('语音播报调用失败:', speechError);
+        }
+      }
+      
+      return result.data;
+    } catch (err) {
+      console.error('AI建议获取失败:', err);
+      setError(err.message);
+      throw err; // 重新抛出错误，让调用方处理
+    } finally {
+      setIsLoading(false);
+    }
+  }, [options, speak]);
+  
+  /**
+   * 隐藏建议
+   */
+  const hide = useCallback(() => {
+    setIsVisible(false);
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+    if (speechRef.current) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+  
+  /**
+   * 切换语音播报状态 - 从App.jsx迁移而来
+   * @param {string} text - 要播报的文本（可选）
+   */
+  const toggleSpeech = useCallback((text) => {
+    if (!window.speechSynthesis) {
+      console.warn('浏览器不支持语音播报');
+      return;
+    }
+    
+    // 如果有正在播放的语音，先停止
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      return; // 点击按钮时停止播放，不再继续
+    }
+    
+    // 如果提供了文本，则开始播报
+    if (text) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.9;
+        speechRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('语音播报失败:', err);
+      }
+    }
+  }, []);
+  
+  /**
    * 停止语音播报
    */
   const stopSpeaking = useCallback(() => {
@@ -144,6 +301,99 @@ export function useAI(options = {}) {
       window.speechSynthesis.cancel();
     }
   }, []);
+  
+  /**
+   * 分析用户行为日志并显示建议
+   * @param {string} userId - 用户ID
+   * @param {string} pageType - 页面类型(可选)
+   * @param {object} configOverrides - 配置覆盖
+   */
+  const analyzeAndShow = useCallback(async (userId, pageType = '', configOverrides = {}) => {
+    console.log(`[AI] 分析用户日志: userId=${userId}, pageType=${pageType}`);
+    
+    // 清除之前的定时器
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+    
+    // 停止之前的语音
+    if (speechRef.current) {
+      window.speechSynthesis.cancel();
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // 获取配置
+      let config;
+      try {
+        config = getAIConfig(pageType || 'home', { ...options, ...configOverrides });
+        console.log(`[AI] 配置:`, config);
+      } catch (configError) {
+        console.error('AI配置获取失败:', configError);
+        // 使用默认配置继续
+        config = { autoShow: true, autoHideDelay: 5000, speakEnabled: false };
+      }
+      
+      // 调用日志分析API
+      const result = await analyzeUserLogs(userId, pageType);
+      console.log(`[AI] 日志分析结果:`, result);
+      
+      // 检查返回的command字段
+      const command = result.command || 'bubble';
+      const text = result.suggestion || '暂无建议';
+      
+      // 更新状态
+      setSuggestion(result);
+      setSuggestionText(text);
+      
+      // 根据command字段决定是否显示弹窗
+      if (command === 'yes' || command === 'bubble') {
+        console.log(`[AI] 显示建议弹窗: ${text}`);
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      } else if (command === 'highlight' && result.fund_id) {
+        console.log(`[AI] 高亮基金: ${result.fund_id}`);
+        // 这里可以添加高亮特定基金的逻辑
+        // 例如，通过事件或状态管理来通知其他组件高亮显示特定基金
+        setIsVisible(true);
+        
+        // 自动隐藏
+        if (config.autoHideDelay > 0) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+          }, config.autoHideDelay);
+        }
+      } else {
+        console.log(`[AI] 不显示弹窗，command: ${command}`);
+        setIsVisible(false);
+      }
+      
+      // 语音播报
+      if (config.speakEnabled && text) {
+        try {
+          speak(text);
+        } catch (speechError) {
+          console.error('语音播报调用失败:', speechError);
+        }
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('用户日志分析失败:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [options, speak]);
   
   /**
    * 清理资源
@@ -171,7 +421,9 @@ export function useAI(options = {}) {
     show,             // 显示建议
     hide,             // 隐藏建议
     speak,            // 语音播报
+    toggleSpeech,     // 切换语音播报状态（从App.jsx迁移而来）
     stopSpeaking,     // 停止播报
+    analyzeAndShow,   // 分析用户日志并显示建议
   };
 }
 
