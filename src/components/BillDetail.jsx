@@ -98,7 +98,7 @@ const BillDetail = ({ onNavigate }) => {
     <div className="bill-detail-page">
       <div className="page-header">
         <button className="back-btn" onClick={() => onNavigate('home')}>返回</button>
-        <h2>账单明细</h2>
+        <h2>交易记录</h2>
         <div className="month-selector">
           <button onClick={() => {
             const date = new Date(selectedMonth);

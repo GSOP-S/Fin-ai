@@ -7,6 +7,7 @@ import FundList from './components/FundList';
 import FundDetail from './components/FundDetail';
 import HomePage from './components/HomePage';
 import TransferPage from './components/TransferPage';
+import AssetPage from './components/AssetPage';
 import BillDetail from './components/BillDetail';
 import NewsPage from './components/NewsPage';
 import { generateAIResponse, generateAISuggestion } from './api/ai';
@@ -141,10 +142,18 @@ function App() {
 
   // 处理选择基金
   const handleSelectFund = async (fund) => {
-    setSelectedFund(fund);
+    // 确保基金数据格式一致，处理资产页面传递的fund_name和fund_code字段
+    const normalizedFund = {
+      ...fund,
+      // 如果有fund_name和fund_code字段，则转换为name和code字段
+      name: fund.name || fund.fund_name,
+      code: fund.code || fund.fund_code
+    };
+    
+    setSelectedFund(normalizedFund);
     
     // 使用fund.js中的showFundSuggestion函数处理基金建议的显示
-    showFundSuggestion(fund, ai);
+    showFundSuggestion(normalizedFund, ai);
   };
 
   
@@ -208,6 +217,13 @@ function App() {
           />
         );
       
+      case 'assets':
+        return (
+          <AssetPage 
+            onNavigate={handleNavigate}
+          />
+        );
+      
       case 'deposit':
         return (
           <div className="page-container">
@@ -236,8 +252,9 @@ function App() {
   const getPageTitle = (page) => {
     const titles = {
       'home': '首页',
-      'account': '账户明细',
+      'account': '交易记录',
       'transfer': '转账汇款',
+      'assets': '我的资产',
       'financing': '投资理财',
       'deposit': '定期存款',
       'creditCard': '信用卡',
@@ -352,7 +369,7 @@ function App() {
       </main>
       
       {/* 底部导航栏 */}
-      {(currentPage === 'home' || currentPage === 'financing' || currentPage === 'news') && !selectedFund && (
+      {(currentPage === 'home' || currentPage === 'financing' || currentPage === 'news' || currentPage === 'assets') && !selectedFund && (
         <nav className="bottom-nav">
           <button 
             className={`nav-item ${currentPage === 'home' ? 'active' : ''}`}
@@ -366,7 +383,7 @@ function App() {
             onClick={() => handleNavigate('account')}
           >
             <span className="nav-icon">📊</span>
-            <span className="nav-text">账户</span>
+            <span className="nav-text">交易记录</span>
           </button>
           <button 
             className={`nav-item ${currentPage === 'financing' ? 'active' : ''}`}
@@ -374,6 +391,13 @@ function App() {
           >
             <span className="nav-icon">💰</span>
             <span className="nav-text">理财</span>
+          </button>
+          <button 
+            className={`nav-item ${currentPage === 'assets' ? 'active' : ''}`}
+            onClick={() => handleNavigate('assets')}
+          >
+            <span className="nav-icon">💼</span>
+            <span className="nav-text">资产</span>
           </button>
           <button 
             className={`nav-item ${currentPage === 'news' ? 'active' : ''}`}

@@ -17,7 +17,7 @@ function HomePage({ onNavigate, user }) {
   }, [user?.id, tracker]);
   // 模拟用户账户信息
   const accountInfo = {
-    balance: '128,563.45',
+    balance: '566588.66',
     accountNumber: '6222 **** **** 5678',
     userName: user?.displayName || '张三',
     todayIncome: '12.35'
@@ -27,12 +27,12 @@ function HomePage({ onNavigate, user }) {
   const quickActions = [
     {
       id: 'account',
-      title: '账户',
+      title: '交易',
       icon: '📊',
       onClick: () => {
         tracker.track(EventTypes.CLICK, {
           element_id: 'quick-action-account',
-          element_text: '账户',
+          element_text: '交易',
           action_type: 'quick_action',
           target_page: 'account',
         });
@@ -40,17 +40,17 @@ function HomePage({ onNavigate, user }) {
       }
     },
     {
-      id: 'transfer',
-      title: '转账',
-      icon: '💸',
+      id: 'assets',
+      title: '资产',
+      icon: '💼',
       onClick: () => {
         tracker.track(EventTypes.CLICK, {
-          element_id: 'quick-action-transfer',
-          element_text: '转账',
+          element_id: 'quick-action-assets',
+          element_text: '资产',
           action_type: 'quick_action',
-          target_page: 'transfer',
+          target_page: 'assets',
         });
-        onNavigate('transfer');
+        onNavigate('assets');
       }
     },
     {

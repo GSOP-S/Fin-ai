@@ -1,197 +1,127 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './TransferPage.css';
 import { usePageTracking } from '../hooks/usePageTracking';
 import { useBehaviorTracker } from '../hooks/useBehaviorTracker';
 import { EventTypes } from '../config/tracking.config';
 
-function TransferPage({ onNavigate }) {
+function AssetsPage({ onNavigate }) {
   // ===== 行为追踪 =====
   const tracker = useBehaviorTracker();
-  usePageTracking('transfer');
+  usePageTracking('assets');
   
-  // 状态管理
-  const [recipientAccount, setRecipientAccount] = useState('');
-  const [transferAmount, setTransferAmount] = useState('');
-  const [isFirstTimeAccount, setIsFirstTimeAccount] = useState(false);
-  const [accountType, setAccountType] = useState('');
+  // 模拟用户资产数据
+  const [assetsData, setAssetsData] = useState({
+    totalAssets: 128563.45,
+    funds: [
+      { id: 1, name: '华夏成长混合', code: '000001', amount: 50000, yield: '+8.5%', nav: 1.256 },
+      { id: 2, name: '易方达消费行业', code: '110022', amount: 30000, yield: '+12.3%', nav: 3.847 },
+      { id: 3, name: '嘉实新兴产业', code: '000755', amount: 20000, yield: '-2.1%', nav: 2.134 },
+      { id: 4, name: '南方中证500', code: '160119', amount: 15000, yield: '+5.7%', nav: 1.089 }
+    ],
+    deposits: [
+      { id: 1, name: '定期存款(1年期)', amount: 10000, rate: '3.25%', maturity: '2024-12-31' },
+      { id: 2, name: '大额存单(3年期)', amount: 50000, rate: '3.85%', maturity: '2027-03-15' }
+    ]
+  });
 
-  // 模拟历史转账账户数据
-  const recentAccounts = [
-    {
-      id: 1,
-      name: '张三',
-      accountNumber: '****1234',
-      avatar: '张',
-      lastTransfer: '2023-10-15'
-    },
-    {
-      id: 2,
-      name: '李四',
-      accountNumber: '****5678',
-      avatar: '李',
-      lastTransfer: '2023-10-10'
-    },
-    {
-      id: 3,
-      name: '王五',
-      accountNumber: '****9012',
-      avatar: '王',
-      lastTransfer: '2023-10-05'
-    }
-  ];
-
-  // 处理收款账户输入变化
-  const handleRecipientAccountChange = (e) => {
-    const value = e.target.value;
-    setRecipientAccount(value);
+  // 处理基金点击，跳转到基金详情页
+  const handleFundClick = (fund) => {
+    // 追踪基金点击（实时上报）
+    tracker.track(EventTypes.FUND_CLICK_ASSETS, {
+      fund_code: fund.code,
+      fund_name: fund.name,
+      fund_amount: fund.amount,
+      fund_yield: fund.yield,
+    }, { realtime: true });
     
-    // 模拟检测账户类型
-    let detectedAccountType = '';
-    let isFirstTime = false;
-    
-    if (value.includes('6222')) {
-      detectedAccountType = 'same_bank';
-    } else if (value.length >= 10) {
-      detectedAccountType = 'other_bank';
-      isFirstTime = Math.random() > 0.5; // 模拟首次添加账户
-    }
-    
-    setAccountType(detectedAccountType);
-    setIsFirstTimeAccount(isFirstTime);
-    
-    // 追踪收款账户选择（卡号会自动脱敏）
-    if (value.length >= 10) {
-      tracker.track(EventTypes.TRANSFER_SELECT, {
-        cardNumber: value, // 会被自动脱敏（保留前4后4）
-        account_type: detectedAccountType,
-        is_first_time: isFirstTime,
-      });
-    }
-    
-    // 自动触发AI建议已删除，改为完全依赖行为追踪触发
+    // 跳转到基金详情页
+    onNavigate('fund-detail', { fundCode: fund.code });
   };
 
-  // 手动触发行为追踪分析
-  const triggerAISuggestion = () => {
-    // 触发行为追踪分析（发送特殊事件到后端）
-    tracker.track('request_transfer_analysis', {
-      page: 'transfer',
-      recipient_account: recipientAccount,
-      account_type: accountType,
-      is_first_time: isFirstTimeAccount,
-      transfer_amount: parseFloat(transferAmount) || 0,
-      has_amount: !!transferAmount,
-    }, { realtime: true });  // 实时上报，后端分析后返回弹窗指令
+  // 触发资产分析AI建议
+  const triggerAssetAnalysis = () => {
+    tracker.track('request_asset_analysis', {
+      page: 'assets',
+      total_assets: assetsData.totalAssets,
+      fund_count: assetsData.funds.length,
+      deposit_count: assetsData.deposits.length,
+      fund_amounts: assetsData.funds.map(f => f.amount),
+    }, { realtime: true });
     
-    console.log('[TransferPage] 已请求AI转账分析');
-  };
-
-  // 处理金额输入
-  const handleAmountChange = (e) => {
-    const amount = e.target.value;
-    setTransferAmount(amount);
-    
-    // 追踪金额输入（完全采集）
-    if (amount) {
-      tracker.track(EventTypes.TRANSFER_INPUT, {
-        transfer_amount: parseFloat(amount) || 0, // 完全采集金额
-        amount_range: getAmountRange(amount),
-        has_recipient: !!recipientAccount,
-      });
-    }
-  };
-  
-  // 金额范围分类（用于分析）
-  const getAmountRange = (amount) => {
-    const num = parseFloat(amount) || 0;
-    if (num < 100) return '0-100';
-    if (num < 1000) return '100-1000';
-    if (num < 10000) return '1000-10000';
-    if (num < 100000) return '10000-100000';
-    return '100000+';
-  };
-  
-  // 处理转账提交
-  const handleTransferSubmit = (e) => {
-    e.preventDefault();
-    
-    // 追踪转账提交（实时上报）
-    tracker.track(EventTypes.TRANSFER_SUBMIT, {
-      cardNumber: recipientAccount, // 会被自动脱敏
-      transfer_amount: parseFloat(transferAmount) || 0, // 完全采集
-      amount_range: getAmountRange(transferAmount),
-      account_type: accountType,
-      is_first_time: isFirstTimeAccount,
-    }, { realtime: true }); // 实时上报
-    
-    // 转账逻辑处理
-    alert(`转账成功：${transferAmount}元 至 ${recipientAccount}`);
-    onNavigate('home');
+    console.log('[AssetsPage] 已请求资产分析');
   };
 
   return (
-    <div className="transfer-page">
+    <div className="assets-page">
       <div className="page-header">
         <button className="back-btn" onClick={() => onNavigate('home')}>←</button>
-        <h2>转账汇款</h2>
+        <h2>我的资产</h2>
+        <button className="ai-trigger-btn" onClick={triggerAssetAnalysis}>
+          <span className="ai-icon">🤖</span>
+        </button>
       </div>
 
-      <div className="transfer-form">
-        <div className="form-group">
-          <label>收款账户</label>
-          <div className="account-input-container">
-            <input
-              type="text"
-              value={recipientAccount}
-              onChange={handleRecipientAccountChange}
-              placeholder="请输入收款账户或选择历史账户"
-              className="recipient-account-input"
-            />
-            <button
-              className="ai-trigger-btn"
-              onClick={triggerAISuggestion}
-              aria-label="AI转账助手"
-              title="获取智能转账建议"
-            >
-              <span className="ai-icon">🤖</span>
-            </button>
+      {/* 总资产概览 */}
+      <div className="assets-overview">
+        <div className="total-assets-card">
+          <div className="assets-label">总资产</div>
+          <div className="assets-amount">¥{assetsData.totalAssets.toLocaleString()}</div>
+          <div className="assets-detail">
+            <span>基金 {assetsData.funds.length}只</span>
+            <span>存款 {assetsData.deposits.length}笔</span>
           </div>
-          {accountType && (
-            <div className="account-type-indicator">
-              {accountType === 'same_bank' ? (
-                <span className="same-bank">✓ 本行账户 · 实时到账</span>
-              ) : (
-                <span className="other-bank">⚠️ 跨行账户 · 预计1-2小时</span>
-              )}
-            </div>
-          )}
-          {isFirstTimeAccount && (
-            <div className="risk-indicator">
-              ⚠️ 新账户，建议核实收款人信息
-            </div>
-          )}
         </div>
+      </div>
 
-        <div className="form-group">
-          <label>转账金额</label>
-          <input
-            type="number"
-            value={transferAmount}
-            onChange={handleAmountChange}
-            placeholder="请输入转账金额"
-            className="transfer-amount-input"
-          />
+      {/* 基金持仓 */}
+      <div className="assets-section">
+        <div className="section-header">
+          <h3>基金持仓 ({assetsData.funds.length}只)</h3>
         </div>
+        <div className="funds-list">
+          {assetsData.funds.map((fund) => (
+            <div 
+              key={fund.id} 
+              className="fund-asset-item"
+              onClick={() => handleFundClick(fund)}
+            >
+              <div className="fund-info">
+                <div className="fund-name">{fund.name}</div>
+                <div className="fund-code">{fund.code}</div>
+              </div>
+              <div className="fund-amount">
+                <div className="amount">¥{fund.amount.toLocaleString()}</div>
+                <div className={`yield ${fund.yield.startsWith('+') ? 'positive' : 'negative'}`}>
+                  {fund.yield}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        <button 
-          className="transfer-submit-btn"
-          onClick={handleTransferSubmit}
-        >
-          确认转账
-        </button>
+      {/* 存款账户 */}
+      <div className="assets-section">
+        <div className="section-header">
+          <h3>存款账户 ({assetsData.deposits.length}笔)</h3>
+        </div>
+        <div className="deposits-list">
+          {assetsData.deposits.map((deposit) => (
+            <div key={deposit.id} className="deposit-asset-item">
+              <div className="deposit-info">
+                <div className="deposit-name">{deposit.name}</div>
+                <div className="deposit-maturity">到期日: {deposit.maturity}</div>
+              </div>
+              <div className="deposit-amount">
+                <div className="amount">¥{deposit.amount.toLocaleString()}</div>
+                <div className="rate">{deposit.rate}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-export default TransferPage;
+export default AssetsPage;
