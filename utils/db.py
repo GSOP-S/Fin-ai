@@ -12,11 +12,11 @@ def get_db_connection():
     """
     try:
         conn = pymysql.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD', ''),
-            database=os.getenv('DB_NAME', 'Fin'),
-            port=int(os.getenv('DB_PORT', '3306')),
+            host=os.getenv('MYSQL_HOST') or os.getenv('DB_HOST', 'localhost'),
+            user=os.getenv('MYSQL_USER') or os.getenv('DB_USER', 'root'),
+            password=os.getenv('MYSQL_PASSWORD') or os.getenv('DB_PASSWORD', ''),
+            database=os.getenv('MYSQL_DATABASE') or os.getenv('DB_NAME', 'Fin'),
+            port=int(os.getenv('MYSQL_PORT') or os.getenv('DB_PORT', '3306')),
             cursorclass=DictCursor,
             charset='utf8mb4',
             connect_timeout=10

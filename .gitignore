@@ -65,4 +65,18 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+<<<<<<< HEAD
 MANIFEST
+=======
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Vercel
+.vercel
+.vercel.json.backup
+>>>>>>> refs/remotes/origin/feature/fund-detail-chart-add
